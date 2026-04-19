@@ -1,0 +1,48 @@
+# ── Core ML & Training ─────────────────────────────────────────────
+torch>=2.2.0
+transformers>=4.40.0
+peft>=0.10.0                  # QLoRA / LoRA fine-tuning
+bitsandbytes>=0.43.0          # 4-bit quantization
+accelerate>=0.29.0            # multi-GPU / mixed precision
+datasets>=2.18.0              # HuggingFace datasets
+trl>=0.8.0                    # SFTTrainer for fine-tuning
+sentencepiece>=0.2.0          # tokenizer for LLaMA/Gemma
+protobuf>=3.20.0
+
+# ── Anomaly Detection (Project 1 — Two ML Models) ──────────────────
+scikit-learn>=1.4.0
+pandas>=2.2.0
+numpy>=1.26.0
+matplotlib>=3.8.0
+seaborn>=0.13.0
+imbalanced-learn>=0.12.0      # handle class imbalance in anomaly data
+
+# ── Sentiment Analysis (BERT motivation classifier) ─────────────────
+# uses transformers above + below
+scipy>=1.13.0
+
+# ── Voice — Speech-to-Text ──────────────────────────────────────────
+openai-whisper>=20231117      # local Whisper STT
+
+# ── Voice — Text-to-Speech ──────────────────────────────────────────
+elevenlabs>=1.2.0             # ElevenLabs TTS (demo quality)
+TTS>=0.22.0                   # Coqui TTS (local fallback)
+
+# ── API Backend ─────────────────────────────────────────────────────
+fastapi>=0.111.0
+uvicorn[standard]>=0.29.0
+python-multipart>=0.0.9       # for audio file uploads
+pydantic>=2.7.0
+
+# ── Database ────────────────────────────────────────────────────────
+sqlalchemy>=2.0.0
+aiosqlite>=0.20.0             # async SQLite for dev
+
+# ── Utilities ───────────────────────────────────────────────────────
+python-dotenv>=1.0.0          # load .env variables
+httpx>=0.27.0                 # async HTTP client
+tqdm>=4.66.0                  # progress bars
+evaluate>=0.4.0               # BLEU score + other metrics
+rouge-score>=0.1.2            # response quality evaluation
+jupyter>=1.0.0                # notebooks
+ipykernel>=6.29.0
