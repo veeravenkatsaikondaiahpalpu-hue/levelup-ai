@@ -71,3 +71,6 @@ desktop.ini
 *.key
 *.pem
 secrets/
+data/raw/
+data/*.csv
+models/llm/weights/
