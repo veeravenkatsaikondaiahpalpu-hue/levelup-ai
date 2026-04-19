@@ -19,6 +19,7 @@ class BuildType(Enum):
     WELLNESS     = "wellness"
     CREATIVE     = "creative"
     ENTREPRENEUR = "entrepreneur"
+    GAMER        = "gamer"          # ⚡ Unique mechanics — see gamer_mechanics.py
 
 
 # ── Intensity Levels ──────────────────────────────────────────────────────────
@@ -49,6 +50,8 @@ BADGE_TIERS: Dict[BuildType, list] = {
     BuildType.WELLNESS:     ["Balanced", "Grounded",        "Centered",         "Resilient",     "Transcendent",    "Ascendant"],
     BuildType.CREATIVE:     ["Dabbler",  "Artisan",         "Creator",          "Visionary",     "Icon",            "Legend"],
     BuildType.ENTREPRENEUR: ["Hustler",  "Builder",         "Founder",          "Operator",      "Mogul",           "Empire"],
+    # ⚡ Gamer badges — all caps final tier for maximum drama
+    BuildType.GAMER:        ["Noob",     "Casual",          "Ranked",           "Diamond",       "Grandmaster",     "GOD TIER"],
 }
 
 BUILD_DISPLAY_NAMES: Dict[BuildType, str] = {
@@ -58,6 +61,7 @@ BUILD_DISPLAY_NAMES: Dict[BuildType, str] = {
     BuildType.WELLNESS:     "Wellness",
     BuildType.CREATIVE:     "Creative",
     BuildType.ENTREPRENEUR: "Entrepreneur",
+    BuildType.GAMER:        "GAMER",        # all caps — intentional
 }
 
 BUILD_DESCRIPTIONS: Dict[BuildType, str] = {
@@ -67,6 +71,7 @@ BUILD_DESCRIPTIONS: Dict[BuildType, str] = {
     BuildType.WELLNESS:     "Mental health, sleep, nutrition, meditation",
     BuildType.CREATIVE:     "Art, music, writing, design, photography",
     BuildType.ENTREPRENEUR: "Business, networking, productivity, leadership",
+    BuildType.GAMER:        "Competitive gaming, esports, speedrunning, game design — with COMBO, OVERTIME & BOSS DAY mechanics",
 }
 
 
@@ -75,40 +80,51 @@ BUILD_DESCRIPTIONS: Dict[BuildType, str] = {
 # score <  0.8 -> non-primary                     -> 0.5x XP multiplier
 
 BUILD_RELEVANCE: Dict[str, Dict[BuildType, float]] = {
-    # Physical
-    "gym_session":         {BuildType.STRENGTH: 1.0, BuildType.INTELLIGENCE: 0.15, BuildType.DEXTERITY: 0.4,  BuildType.WELLNESS: 0.3,  BuildType.CREATIVE: 0.1,  BuildType.ENTREPRENEUR: 0.1 },
-    "running":             {BuildType.STRENGTH: 0.9, BuildType.INTELLIGENCE: 0.1,  BuildType.DEXTERITY: 0.6,  BuildType.WELLNESS: 0.5,  BuildType.CREATIVE: 0.1,  BuildType.ENTREPRENEUR: 0.1 },
-    "walking":             {BuildType.STRENGTH: 0.4, BuildType.INTELLIGENCE: 0.2,  BuildType.DEXTERITY: 0.3,  BuildType.WELLNESS: 0.6,  BuildType.CREATIVE: 0.2,  BuildType.ENTREPRENEUR: 0.15},
-    "sports":              {BuildType.STRENGTH: 0.8, BuildType.INTELLIGENCE: 0.15, BuildType.DEXTERITY: 0.9,  BuildType.WELLNESS: 0.4,  BuildType.CREATIVE: 0.1,  BuildType.ENTREPRENEUR: 0.1 },
-    "martial_arts":        {BuildType.STRENGTH: 0.8, BuildType.INTELLIGENCE: 0.2,  BuildType.DEXTERITY: 1.0,  BuildType.WELLNESS: 0.3,  BuildType.CREATIVE: 0.1,  BuildType.ENTREPRENEUR: 0.1 },
-    "yoga":                {BuildType.STRENGTH: 0.4, BuildType.INTELLIGENCE: 0.2,  BuildType.DEXTERITY: 0.6,  BuildType.WELLNESS: 0.9,  BuildType.CREATIVE: 0.2,  BuildType.ENTREPRENEUR: 0.1 },
-    "swimming":            {BuildType.STRENGTH: 0.9, BuildType.INTELLIGENCE: 0.1,  BuildType.DEXTERITY: 0.7,  BuildType.WELLNESS: 0.5,  BuildType.CREATIVE: 0.1,  BuildType.ENTREPRENEUR: 0.1 },
-    # Mental / Study
-    "study_session":       {BuildType.STRENGTH: 0.2, BuildType.INTELLIGENCE: 1.0,  BuildType.DEXTERITY: 0.25, BuildType.WELLNESS: 0.2,  BuildType.CREATIVE: 0.3,  BuildType.ENTREPRENEUR: 0.6 },
-    "reading":             {BuildType.STRENGTH: 0.1, BuildType.INTELLIGENCE: 0.9,  BuildType.DEXTERITY: 0.2,  BuildType.WELLNESS: 0.3,  BuildType.CREATIVE: 0.4,  BuildType.ENTREPRENEUR: 0.5 },
-    "online_course":       {BuildType.STRENGTH: 0.1, BuildType.INTELLIGENCE: 1.0,  BuildType.DEXTERITY: 0.3,  BuildType.WELLNESS: 0.2,  BuildType.CREATIVE: 0.35, BuildType.ENTREPRENEUR: 0.65},
-    "research":            {BuildType.STRENGTH: 0.1, BuildType.INTELLIGENCE: 1.0,  BuildType.DEXTERITY: 0.2,  BuildType.WELLNESS: 0.1,  BuildType.CREATIVE: 0.3,  BuildType.ENTREPRENEUR: 0.5 },
-    # Skills
-    "instrument_practice": {BuildType.STRENGTH: 0.15,BuildType.INTELLIGENCE: 0.4,  BuildType.DEXTERITY: 1.0,  BuildType.WELLNESS: 0.25, BuildType.CREATIVE: 0.8,  BuildType.ENTREPRENEUR: 0.15},
-    "coding_sprint":       {BuildType.STRENGTH: 0.1, BuildType.INTELLIGENCE: 0.85, BuildType.DEXTERITY: 0.9,  BuildType.WELLNESS: 0.1,  BuildType.CREATIVE: 0.5,  BuildType.ENTREPRENEUR: 0.7 },
-    "typing_practice":     {BuildType.STRENGTH: 0.05,BuildType.INTELLIGENCE: 0.3,  BuildType.DEXTERITY: 0.9,  BuildType.WELLNESS: 0.05, BuildType.CREATIVE: 0.2,  BuildType.ENTREPRENEUR: 0.3 },
-    # Wellness
-    "meditation":          {BuildType.STRENGTH: 0.2, BuildType.INTELLIGENCE: 0.3,  BuildType.DEXTERITY: 0.2,  BuildType.WELLNESS: 1.0,  BuildType.CREATIVE: 0.3,  BuildType.ENTREPRENEUR: 0.25},
-    "journaling":          {BuildType.STRENGTH: 0.1, BuildType.INTELLIGENCE: 0.5,  BuildType.DEXTERITY: 0.15, BuildType.WELLNESS: 0.8,  BuildType.CREATIVE: 0.7,  BuildType.ENTREPRENEUR: 0.4 },
-    "sleep_tracking":      {BuildType.STRENGTH: 0.3, BuildType.INTELLIGENCE: 0.2,  BuildType.DEXTERITY: 0.2,  BuildType.WELLNESS: 1.0,  BuildType.CREATIVE: 0.15, BuildType.ENTREPRENEUR: 0.15},
-    "nutrition_tracking":  {BuildType.STRENGTH: 0.5, BuildType.INTELLIGENCE: 0.2,  BuildType.DEXTERITY: 0.3,  BuildType.WELLNESS: 0.9,  BuildType.CREATIVE: 0.1,  BuildType.ENTREPRENEUR: 0.15},
-    "cold_shower":         {BuildType.STRENGTH: 0.5, BuildType.INTELLIGENCE: 0.2,  BuildType.DEXTERITY: 0.2,  BuildType.WELLNESS: 0.8,  BuildType.CREATIVE: 0.1,  BuildType.ENTREPRENEUR: 0.2 },
-    # Creative
-    "art_session":         {BuildType.STRENGTH: 0.1, BuildType.INTELLIGENCE: 0.35, BuildType.DEXTERITY: 0.7,  BuildType.WELLNESS: 0.3,  BuildType.CREATIVE: 1.0,  BuildType.ENTREPRENEUR: 0.2 },
-    "writing":             {BuildType.STRENGTH: 0.1, BuildType.INTELLIGENCE: 0.6,  BuildType.DEXTERITY: 0.2,  BuildType.WELLNESS: 0.2,  BuildType.CREATIVE: 1.0,  BuildType.ENTREPRENEUR: 0.7 },
-    "music_production":    {BuildType.STRENGTH: 0.1, BuildType.INTELLIGENCE: 0.4,  BuildType.DEXTERITY: 0.8,  BuildType.WELLNESS: 0.2,  BuildType.CREATIVE: 1.0,  BuildType.ENTREPRENEUR: 0.2 },
-    "photography":         {BuildType.STRENGTH: 0.1, BuildType.INTELLIGENCE: 0.3,  BuildType.DEXTERITY: 0.6,  BuildType.WELLNESS: 0.2,  BuildType.CREATIVE: 0.9,  BuildType.ENTREPRENEUR: 0.3 },
-    "design_work":         {BuildType.STRENGTH: 0.05,BuildType.INTELLIGENCE: 0.4,  BuildType.DEXTERITY: 0.6,  BuildType.WELLNESS: 0.1,  BuildType.CREATIVE: 1.0,  BuildType.ENTREPRENEUR: 0.4 },
-    # Entrepreneur
-    "networking":          {BuildType.STRENGTH: 0.1, BuildType.INTELLIGENCE: 0.3,  BuildType.DEXTERITY: 0.15, BuildType.WELLNESS: 0.2,  BuildType.CREATIVE: 0.2,  BuildType.ENTREPRENEUR: 1.0 },
-    "business_task":       {BuildType.STRENGTH: 0.1, BuildType.INTELLIGENCE: 0.4,  BuildType.DEXTERITY: 0.2,  BuildType.WELLNESS: 0.1,  BuildType.CREATIVE: 0.25, BuildType.ENTREPRENEUR: 1.0 },
-    "cold_outreach":       {BuildType.STRENGTH: 0.05,BuildType.INTELLIGENCE: 0.25, BuildType.DEXTERITY: 0.1,  BuildType.WELLNESS: 0.05, BuildType.CREATIVE: 0.15, BuildType.ENTREPRENEUR: 0.9 },
-    "pitch_practice":      {BuildType.STRENGTH: 0.1, BuildType.INTELLIGENCE: 0.4,  BuildType.DEXTERITY: 0.3,  BuildType.WELLNESS: 0.1,  BuildType.CREATIVE: 0.4,  BuildType.ENTREPRENEUR: 0.9 },
+    # ── Physical ─────────────────────────────────── STR    INT    DEX    WEL    CRE    ENT    GAMER
+    "gym_session":         {BuildType.STRENGTH: 1.0, BuildType.INTELLIGENCE: 0.15, BuildType.DEXTERITY: 0.4,  BuildType.WELLNESS: 0.3,  BuildType.CREATIVE: 0.1,  BuildType.ENTREPRENEUR: 0.1,  BuildType.GAMER: 0.3 },
+    "running":             {BuildType.STRENGTH: 0.9, BuildType.INTELLIGENCE: 0.1,  BuildType.DEXTERITY: 0.6,  BuildType.WELLNESS: 0.5,  BuildType.CREATIVE: 0.1,  BuildType.ENTREPRENEUR: 0.1,  BuildType.GAMER: 0.3 },
+    "walking":             {BuildType.STRENGTH: 0.4, BuildType.INTELLIGENCE: 0.2,  BuildType.DEXTERITY: 0.3,  BuildType.WELLNESS: 0.6,  BuildType.CREATIVE: 0.2,  BuildType.ENTREPRENEUR: 0.15, BuildType.GAMER: 0.2 },
+    "sports":              {BuildType.STRENGTH: 0.8, BuildType.INTELLIGENCE: 0.15, BuildType.DEXTERITY: 0.9,  BuildType.WELLNESS: 0.4,  BuildType.CREATIVE: 0.1,  BuildType.ENTREPRENEUR: 0.1,  BuildType.GAMER: 0.4 },
+    "martial_arts":        {BuildType.STRENGTH: 0.8, BuildType.INTELLIGENCE: 0.2,  BuildType.DEXTERITY: 1.0,  BuildType.WELLNESS: 0.3,  BuildType.CREATIVE: 0.1,  BuildType.ENTREPRENEUR: 0.1,  BuildType.GAMER: 0.35},
+    "yoga":                {BuildType.STRENGTH: 0.4, BuildType.INTELLIGENCE: 0.2,  BuildType.DEXTERITY: 0.6,  BuildType.WELLNESS: 0.9,  BuildType.CREATIVE: 0.2,  BuildType.ENTREPRENEUR: 0.1,  BuildType.GAMER: 0.1 },
+    "swimming":            {BuildType.STRENGTH: 0.9, BuildType.INTELLIGENCE: 0.1,  BuildType.DEXTERITY: 0.7,  BuildType.WELLNESS: 0.5,  BuildType.CREATIVE: 0.1,  BuildType.ENTREPRENEUR: 0.1,  BuildType.GAMER: 0.2 },
+    # ── Mental / Study ──────────────────────────────────────────────────────────────────────────────
+    "study_session":       {BuildType.STRENGTH: 0.2, BuildType.INTELLIGENCE: 1.0,  BuildType.DEXTERITY: 0.25, BuildType.WELLNESS: 0.2,  BuildType.CREATIVE: 0.3,  BuildType.ENTREPRENEUR: 0.6,  BuildType.GAMER: 0.3 },
+    "reading":             {BuildType.STRENGTH: 0.1, BuildType.INTELLIGENCE: 0.9,  BuildType.DEXTERITY: 0.2,  BuildType.WELLNESS: 0.3,  BuildType.CREATIVE: 0.4,  BuildType.ENTREPRENEUR: 0.5,  BuildType.GAMER: 0.3 },
+    "online_course":       {BuildType.STRENGTH: 0.1, BuildType.INTELLIGENCE: 1.0,  BuildType.DEXTERITY: 0.3,  BuildType.WELLNESS: 0.2,  BuildType.CREATIVE: 0.35, BuildType.ENTREPRENEUR: 0.65, BuildType.GAMER: 0.35},
+    "research":            {BuildType.STRENGTH: 0.1, BuildType.INTELLIGENCE: 1.0,  BuildType.DEXTERITY: 0.2,  BuildType.WELLNESS: 0.1,  BuildType.CREATIVE: 0.3,  BuildType.ENTREPRENEUR: 0.5,  BuildType.GAMER: 0.25},
+    # ── Skills ──────────────────────────────────────────────────────────────────────────────────────
+    "instrument_practice": {BuildType.STRENGTH: 0.15,BuildType.INTELLIGENCE: 0.4,  BuildType.DEXTERITY: 1.0,  BuildType.WELLNESS: 0.25, BuildType.CREATIVE: 0.8,  BuildType.ENTREPRENEUR: 0.15, BuildType.GAMER: 0.2 },
+    "coding_sprint":       {BuildType.STRENGTH: 0.1, BuildType.INTELLIGENCE: 0.85, BuildType.DEXTERITY: 0.9,  BuildType.WELLNESS: 0.1,  BuildType.CREATIVE: 0.5,  BuildType.ENTREPRENEUR: 0.7,  BuildType.GAMER: 0.5 },
+    "typing_practice":     {BuildType.STRENGTH: 0.05,BuildType.INTELLIGENCE: 0.3,  BuildType.DEXTERITY: 0.9,  BuildType.WELLNESS: 0.05, BuildType.CREATIVE: 0.2,  BuildType.ENTREPRENEUR: 0.3,  BuildType.GAMER: 0.6 },
+    # ── Wellness ────────────────────────────────────────────────────────────────────────────────────
+    "meditation":          {BuildType.STRENGTH: 0.2, BuildType.INTELLIGENCE: 0.3,  BuildType.DEXTERITY: 0.2,  BuildType.WELLNESS: 1.0,  BuildType.CREATIVE: 0.3,  BuildType.ENTREPRENEUR: 0.25, BuildType.GAMER: 0.2 },
+    "journaling":          {BuildType.STRENGTH: 0.1, BuildType.INTELLIGENCE: 0.5,  BuildType.DEXTERITY: 0.15, BuildType.WELLNESS: 0.8,  BuildType.CREATIVE: 0.7,  BuildType.ENTREPRENEUR: 0.4,  BuildType.GAMER: 0.2 },
+    "sleep_tracking":      {BuildType.STRENGTH: 0.3, BuildType.INTELLIGENCE: 0.2,  BuildType.DEXTERITY: 0.2,  BuildType.WELLNESS: 1.0,  BuildType.CREATIVE: 0.15, BuildType.ENTREPRENEUR: 0.15, BuildType.GAMER: 0.3 },
+    "nutrition_tracking":  {BuildType.STRENGTH: 0.5, BuildType.INTELLIGENCE: 0.2,  BuildType.DEXTERITY: 0.3,  BuildType.WELLNESS: 0.9,  BuildType.CREATIVE: 0.1,  BuildType.ENTREPRENEUR: 0.15, BuildType.GAMER: 0.2 },
+    "cold_shower":         {BuildType.STRENGTH: 0.5, BuildType.INTELLIGENCE: 0.2,  BuildType.DEXTERITY: 0.2,  BuildType.WELLNESS: 0.8,  BuildType.CREATIVE: 0.1,  BuildType.ENTREPRENEUR: 0.2,  BuildType.GAMER: 0.2 },
+    # ── Creative ────────────────────────────────────────────────────────────────────────────────────
+    "art_session":         {BuildType.STRENGTH: 0.1, BuildType.INTELLIGENCE: 0.35, BuildType.DEXTERITY: 0.7,  BuildType.WELLNESS: 0.3,  BuildType.CREATIVE: 1.0,  BuildType.ENTREPRENEUR: 0.2,  BuildType.GAMER: 0.3 },
+    "writing":             {BuildType.STRENGTH: 0.1, BuildType.INTELLIGENCE: 0.6,  BuildType.DEXTERITY: 0.2,  BuildType.WELLNESS: 0.2,  BuildType.CREATIVE: 1.0,  BuildType.ENTREPRENEUR: 0.7,  BuildType.GAMER: 0.3 },
+    "music_production":    {BuildType.STRENGTH: 0.1, BuildType.INTELLIGENCE: 0.4,  BuildType.DEXTERITY: 0.8,  BuildType.WELLNESS: 0.2,  BuildType.CREATIVE: 1.0,  BuildType.ENTREPRENEUR: 0.2,  BuildType.GAMER: 0.2 },
+    "photography":         {BuildType.STRENGTH: 0.1, BuildType.INTELLIGENCE: 0.3,  BuildType.DEXTERITY: 0.6,  BuildType.WELLNESS: 0.2,  BuildType.CREATIVE: 0.9,  BuildType.ENTREPRENEUR: 0.3,  BuildType.GAMER: 0.1 },
+    "design_work":         {BuildType.STRENGTH: 0.05,BuildType.INTELLIGENCE: 0.4,  BuildType.DEXTERITY: 0.6,  BuildType.WELLNESS: 0.1,  BuildType.CREATIVE: 1.0,  BuildType.ENTREPRENEUR: 0.4,  BuildType.GAMER: 0.4 },
+    # ── Entrepreneur ────────────────────────────────────────────────────────────────────────────────
+    "networking":          {BuildType.STRENGTH: 0.1, BuildType.INTELLIGENCE: 0.3,  BuildType.DEXTERITY: 0.15, BuildType.WELLNESS: 0.2,  BuildType.CREATIVE: 0.2,  BuildType.ENTREPRENEUR: 1.0,  BuildType.GAMER: 0.3 },
+    "business_task":       {BuildType.STRENGTH: 0.1, BuildType.INTELLIGENCE: 0.4,  BuildType.DEXTERITY: 0.2,  BuildType.WELLNESS: 0.1,  BuildType.CREATIVE: 0.25, BuildType.ENTREPRENEUR: 1.0,  BuildType.GAMER: 0.2 },
+    "cold_outreach":       {BuildType.STRENGTH: 0.05,BuildType.INTELLIGENCE: 0.25, BuildType.DEXTERITY: 0.1,  BuildType.WELLNESS: 0.05, BuildType.CREATIVE: 0.15, BuildType.ENTREPRENEUR: 0.9,  BuildType.GAMER: 0.1 },
+    "pitch_practice":      {BuildType.STRENGTH: 0.1, BuildType.INTELLIGENCE: 0.4,  BuildType.DEXTERITY: 0.3,  BuildType.WELLNESS: 0.1,  BuildType.CREATIVE: 0.4,  BuildType.ENTREPRENEUR: 0.9,  BuildType.GAMER: 0.2 },
+    # ── GAMER (primary activities) ─────────────── STR    INT    DEX    WEL    CRE    ENT    GAMER
+    "competitive_gaming":  {BuildType.STRENGTH: 0.1, BuildType.INTELLIGENCE: 0.2,  BuildType.DEXTERITY: 0.5,  BuildType.WELLNESS: 0.05, BuildType.CREATIVE: 0.1,  BuildType.ENTREPRENEUR: 0.1,  BuildType.GAMER: 1.0 },
+    "speedrunning":        {BuildType.STRENGTH: 0.2, BuildType.INTELLIGENCE: 0.3,  BuildType.DEXTERITY: 0.7,  BuildType.WELLNESS: 0.05, BuildType.CREATIVE: 0.1,  BuildType.ENTREPRENEUR: 0.1,  BuildType.GAMER: 1.0 },
+    "esports_practice":    {BuildType.STRENGTH: 0.15,BuildType.INTELLIGENCE: 0.3,  BuildType.DEXTERITY: 0.8,  BuildType.WELLNESS: 0.05, BuildType.CREATIVE: 0.1,  BuildType.ENTREPRENEUR: 0.1,  BuildType.GAMER: 1.0 },
+    "tournament_play":     {BuildType.STRENGTH: 0.2, BuildType.INTELLIGENCE: 0.3,  BuildType.DEXTERITY: 0.7,  BuildType.WELLNESS: 0.1,  BuildType.CREATIVE: 0.1,  BuildType.ENTREPRENEUR: 0.2,  BuildType.GAMER: 1.0 },
+    "puzzle_games":        {BuildType.STRENGTH: 0.05,BuildType.INTELLIGENCE: 0.7,  BuildType.DEXTERITY: 0.4,  BuildType.WELLNESS: 0.1,  BuildType.CREATIVE: 0.2,  BuildType.ENTREPRENEUR: 0.2,  BuildType.GAMER: 0.9 },
+    "apm_training":        {BuildType.STRENGTH: 0.1, BuildType.INTELLIGENCE: 0.2,  BuildType.DEXTERITY: 0.9,  BuildType.WELLNESS: 0.05, BuildType.CREATIVE: 0.1,  BuildType.ENTREPRENEUR: 0.1,  BuildType.GAMER: 0.9 },
+    "game_design":         {BuildType.STRENGTH: 0.05,BuildType.INTELLIGENCE: 0.5,  BuildType.DEXTERITY: 0.4,  BuildType.WELLNESS: 0.05, BuildType.CREATIVE: 0.7,  BuildType.ENTREPRENEUR: 0.4,  BuildType.GAMER: 0.9 },
+    "streaming":           {BuildType.STRENGTH: 0.05,BuildType.INTELLIGENCE: 0.2,  BuildType.DEXTERITY: 0.3,  BuildType.WELLNESS: 0.05, BuildType.CREATIVE: 0.5,  BuildType.ENTREPRENEUR: 0.5,  BuildType.GAMER: 0.85},
+    "game_theory_study":   {BuildType.STRENGTH: 0.05,BuildType.INTELLIGENCE: 0.6,  BuildType.DEXTERITY: 0.3,  BuildType.WELLNESS: 0.05, BuildType.CREATIVE: 0.2,  BuildType.ENTREPRENEUR: 0.2,  BuildType.GAMER: 0.8 },
+    "game_review_analysis":{BuildType.STRENGTH: 0.05,BuildType.INTELLIGENCE: 0.7,  BuildType.DEXTERITY: 0.2,  BuildType.WELLNESS: 0.05, BuildType.CREATIVE: 0.2,  BuildType.ENTREPRENEUR: 0.2,  BuildType.GAMER: 0.8 },
 }
 
 PRIMARY_THRESHOLD = 0.8  # score >= this = primary activity for that build
