@@ -34,6 +34,23 @@ from .user_state import (
     UserState,
 )
 
+from .gamer_mechanics import (
+    GamerXPResult,
+    GAMER_COMBO_BONUSES,
+    GAMER_COMBO_BONUS_MAX,
+    GAMER_OVERTIME_LIMIT,
+    GAMER_BOSS_DAY_INTERVAL,
+    GAMER_SPEEDRUN_BONUS_XP,
+    GAMER_SPEEDRUN_THRESHOLD_MINS,
+    GAMER_SIDE_QUEST_MULTIPLIER,
+    get_combo_multiplier,
+    is_boss_day,
+    get_gamer_daily_cap,
+    qualifies_for_speedrun_bonus,
+    get_gamer_relevance_multiplier,
+    calculate_gamer_xp,
+)
+
 __all__ = [
     # builds
     "BuildType", "Intensity", "INTENSITY_MULTIPLIERS",
@@ -46,4 +63,12 @@ __all__ = [
     "get_streak_multiplier", "get_daily_cap", "calculate_xp", "best_activity_for_xp",
     # user_state
     "ActivityLog", "BuildProfile", "UserState",
+    # gamer_mechanics
+    "GamerXPResult",
+    "GAMER_COMBO_BONUSES", "GAMER_COMBO_BONUS_MAX", "GAMER_OVERTIME_LIMIT",
+    "GAMER_BOSS_DAY_INTERVAL", "GAMER_SPEEDRUN_BONUS_XP",
+    "GAMER_SPEEDRUN_THRESHOLD_MINS", "GAMER_SIDE_QUEST_MULTIPLIER",
+    "get_combo_multiplier", "is_boss_day", "get_gamer_daily_cap",
+    "qualifies_for_speedrun_bonus", "get_gamer_relevance_multiplier",
+    "calculate_gamer_xp",
 ]

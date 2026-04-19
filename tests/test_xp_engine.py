@@ -11,6 +11,12 @@ from xp_engine import (
     get_daily_cap, calculate_level, is_primary_activity,
     get_xp_relevance_multiplier, get_badge_index_for_xp,
     BuildProfile, UserState, ActivityLog,
+    calculate_gamer_xp, get_combo_multiplier, is_boss_day,
+    get_gamer_daily_cap, qualifies_for_speedrun_bonus,
+    get_gamer_relevance_multiplier,
+    GAMER_OVERTIME_LIMIT, GAMER_BOSS_DAY_INTERVAL,
+    GAMER_SPEEDRUN_BONUS_XP, GAMER_SPEEDRUN_THRESHOLD_MINS,
+    GAMER_SIDE_QUEST_MULTIPLIER,
 )
 
 
@@ -354,3 +360,239 @@ class TestUserState:
         ]
         for key in required:
             assert key in ctx, f"Missing key: {key}"
+
+    def test_context_dict_has_gamer_keys(self):
+        user = self._make_user()
+        ctx = user.to_context_dict()
+        gamer_keys = [
+            "gamer_sessions_today", "gamer_overtime_xp_today",
+            "gamer_overtime_remaining", "gamer_is_boss_day",
+        ]
+        for key in gamer_keys:
+            assert key in ctx, f"Missing gamer key: {key}"
+
+
+# ── Gamer Mechanics ───────────────────────────────────────────────────────────
+
+class TestGamerComboMultiplier:
+    def test_first_session_no_combo(self):
+        assert get_combo_multiplier(0) == 0.0
+
+    def test_second_session_is_0_2x(self):
+        assert get_combo_multiplier(1) == 0.20
+
+    def test_third_session_is_0_3x(self):
+        assert get_combo_multiplier(2) == 0.30
+
+    def test_fourth_session_is_0_4x(self):
+        assert get_combo_multiplier(3) == 0.40
+
+    def test_fifth_session_is_still_0_4x(self):
+        assert get_combo_multiplier(4) == 0.40
+
+
+class TestGamerBossDay:
+    def test_streak_7_is_boss_day(self):
+        assert is_boss_day(7) is True
+
+    def test_streak_14_is_boss_day(self):
+        assert is_boss_day(14) is True
+
+    def test_streak_6_is_not_boss_day(self):
+        assert is_boss_day(6) is False
+
+    def test_streak_0_is_not_boss_day(self):
+        assert is_boss_day(0) is False
+
+    def test_streak_21_is_boss_day(self):
+        assert is_boss_day(21) is True
+
+
+class TestGamerDailyCap:
+    def test_normal_day_cap_unchanged(self):
+        assert get_gamer_daily_cap(600, 5) == 600
+
+    def test_boss_day_doubles_cap(self):
+        assert get_gamer_daily_cap(600, 7) == 1200
+
+    def test_boss_day_doubles_higher_cap(self):
+        assert get_gamer_daily_cap(800, 14) == 1600
+
+
+class TestSpeedrunBonus:
+    def test_qualifies_intense_short(self):
+        assert qualifies_for_speedrun_bonus(
+            "competitive_gaming", GAMER_SPEEDRUN_THRESHOLD_MINS, Intensity.INTENSE
+        ) is True
+
+    def test_too_long_no_bonus(self):
+        assert qualifies_for_speedrun_bonus(
+            "competitive_gaming", GAMER_SPEEDRUN_THRESHOLD_MINS + 1, Intensity.INTENSE
+        ) is False
+
+    def test_moderate_no_bonus(self):
+        assert qualifies_for_speedrun_bonus(
+            "competitive_gaming", 20, Intensity.MODERATE
+        ) is False
+
+    def test_light_no_bonus(self):
+        assert qualifies_for_speedrun_bonus(
+            "competitive_gaming", 10, Intensity.LIGHT
+        ) is False
+
+
+class TestGamerRelevanceMultiplier:
+    def test_primary_gamer_activity_is_1x(self):
+        assert get_gamer_relevance_multiplier("competitive_gaming") == 1.0
+
+    def test_non_gamer_activity_is_side_quest(self):
+        mult = get_gamer_relevance_multiplier("gym_session")
+        assert mult == GAMER_SIDE_QUEST_MULTIPLIER
+        assert mult == 0.40
+
+    def test_side_quest_stricter_than_default(self):
+        # 0.4x is stricter than standard 0.5x non-primary
+        assert get_gamer_relevance_multiplier("study_session") < 0.5
+
+
+class TestCalculateGamerXP:
+    def _base_kwargs(self, **overrides):
+        kwargs = dict(
+            activity_type          = "competitive_gaming",
+            duration_minutes       = 60,
+            intensity              = Intensity.INTENSE,
+            current_streak         = 1,
+            current_level          = 1,
+            daily_xp_so_far        = 0,
+            primary_sessions_today = 0,
+            overtime_xp_today      = 0,
+        )
+        kwargs.update(overrides)
+        return kwargs
+
+    def test_first_session_no_bonuses(self):
+        """Day 1, session 1, no cap — base XP only"""
+        r = calculate_gamer_xp(**self._base_kwargs())
+        # base: 60 * 2.0 * 1.0 * 1.0 = 120
+        assert r.base_final_xp == 120
+        assert r.combo_bonus_xp == 0
+        assert r.speedrun_bonus == 0
+        assert r.overtime_xp == 0
+        assert r.final_xp == 120
+
+    def test_combo_bonus_on_second_session(self):
+        """Second primary session today → +0.2x combo"""
+        r = calculate_gamer_xp(**self._base_kwargs(primary_sessions_today=1))
+        # base 120, combo = 120 * 0.2 = 24
+        assert r.combo_multiplier == 0.20
+        assert r.combo_bonus_xp == 24
+        assert r.final_xp == 144
+
+    def test_combo_bonus_on_fourth_session(self):
+        """Fourth session → +0.4x combo"""
+        r = calculate_gamer_xp(**self._base_kwargs(primary_sessions_today=3))
+        assert r.combo_multiplier == 0.40
+        assert r.combo_bonus_xp == 48
+        assert r.final_xp == 168
+
+    def test_speedrun_bonus_applied(self):
+        """Intense session ≤25 min gets +15 XP"""
+        r = calculate_gamer_xp(**self._base_kwargs(
+            duration_minutes=GAMER_SPEEDRUN_THRESHOLD_MINS,
+            intensity=Intensity.INTENSE,
+        ))
+        assert r.speedrun_bonus == GAMER_SPEEDRUN_BONUS_XP
+        assert GAMER_SPEEDRUN_BONUS_XP in [r.final_xp - r.base_final_xp,
+                                            r.final_xp - r.base_final_xp - r.combo_bonus_xp]
+
+    def test_no_speedrun_bonus_for_moderate(self):
+        r = calculate_gamer_xp(**self._base_kwargs(
+            duration_minutes=20,
+            intensity=Intensity.MODERATE,
+        ))
+        assert r.speedrun_bonus == 0
+
+    def test_overtime_xp_after_cap(self):
+        """Already at cap → Overtime pool absorbs overflow"""
+        r = calculate_gamer_xp(**self._base_kwargs(daily_xp_so_far=600))
+        # Base earn = 0 (cap hit), overtime = min(120, 150) = 120
+        assert r.base_final_xp == 0
+        assert r.overtime_xp > 0
+        assert r.overtime_xp <= GAMER_OVERTIME_LIMIT
+
+    def test_overtime_pool_depletes(self):
+        """Overtime already partly spent — can't exceed remaining pool"""
+        r = calculate_gamer_xp(**self._base_kwargs(
+            daily_xp_so_far=600,
+            overtime_xp_today=100,
+        ))
+        assert r.overtime_xp <= 50   # 150 - 100 = 50 remaining
+        assert r.overtime_pool_remaining == max(0, 50 - r.overtime_xp)
+
+    def test_boss_day_doubles_cap(self):
+        """Streak=7 → Boss Day → cap 1200 instead of 600.
+        Streak 7 also activates the 1.5x Power-Up streak bonus (day 5+),
+        so raw XP = 60 * 2.0 * 1.0 * 1.5 = 180 (well within 1200 cap)."""
+        r = calculate_gamer_xp(**self._base_kwargs(
+            current_streak=7,
+            daily_xp_so_far=0,
+        ))
+        assert r.is_boss_day is True
+        # 60 * 2.0 * 1.0 * 1.5 = 180 (streak 1.5x at day 7, cap not exceeded)
+        assert r.base_final_xp == 180
+
+    def test_side_quest_penalty_applied(self):
+        """Non-Gamer activity → 0.4x penalty"""
+        r = calculate_gamer_xp(**self._base_kwargs(activity_type="gym_session"))
+        assert r.side_quest_penalty is True
+        # base: 60 * 2.0 * 0.4 * 1.0 = 48
+        assert r.base_final_xp == 48
+
+    def test_side_quest_no_combo_bonus(self):
+        """Combo multiplier does NOT apply to side quest (non-primary) sessions"""
+        r = calculate_gamer_xp(**self._base_kwargs(
+            activity_type="gym_session",
+            primary_sessions_today=2,
+        ))
+        assert r.combo_bonus_xp == 0
+
+    def test_summary_is_string(self):
+        r = calculate_gamer_xp(**self._base_kwargs())
+        assert isinstance(r.summary(), str)
+        assert "GAMER SESSION" in r.summary()
+
+
+class TestGamerUserState:
+    def _make_gamer(self):
+        return UserState(
+            user_id       = "test_gamer",
+            username      = "Veera",
+            primary_build = BuildProfile(BuildType.GAMER, total_xp=0),
+        )
+
+    def test_gamer_fields_initialized(self):
+        user = self._make_gamer()
+        assert user.sessions_today == 0
+        assert user.overtime_xp_today == 0
+
+    def test_gamer_fields_in_context(self):
+        user = self._make_gamer()
+        ctx = user.to_context_dict()
+        assert "gamer_sessions_today" in ctx
+        assert "gamer_overtime_remaining" in ctx
+        assert ctx["gamer_overtime_remaining"] == GAMER_OVERTIME_LIMIT
+
+    def test_boss_day_flag_in_context(self):
+        user = self._make_gamer()
+        user.current_streak = GAMER_BOSS_DAY_INTERVAL
+        ctx = user.to_context_dict()
+        assert ctx["gamer_is_boss_day"] is True
+
+    def test_boss_day_doubles_daily_cap_in_add_xp(self):
+        user = self._make_gamer()
+        user.current_streak = GAMER_BOSS_DAY_INTERVAL  # Boss Day
+        user.daily_xp_today = 550
+        # Standard cap 600 → Boss cap 1200 → 650 XP still available
+        result = user.add_xp(200)
+        assert result["xp_added"] == 200   # not capped at 600
+        assert result["daily_cap"] == 1200

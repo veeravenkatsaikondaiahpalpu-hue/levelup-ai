@@ -21,6 +21,12 @@ from .builds import (
     calculate_level,
 )
 from .xp_calculator import get_streak_multiplier, get_daily_cap
+from .gamer_mechanics import (
+    calculate_gamer_xp,
+    get_gamer_daily_cap,
+    is_boss_day as gamer_is_boss_day,
+    GAMER_OVERTIME_LIMIT,
+)
 
 
 # ── Activity Log ──────────────────────────────────────────────────────────────
@@ -136,6 +142,10 @@ class UserState:
     daily_xp_today:   int  = 0
     last_reset_date:  str  = field(default_factory=lambda: date.today().isoformat())
 
+    # Gamer-exclusive session tracking (resets daily alongside daily_xp_today)
+    sessions_today:       int = 0   # primary GAMER sessions logged today
+    overtime_xp_today:    int = 0   # Overtime XP consumed today (max 150)
+
     # Streak shields (4 per month, auto-resets on 1st of each month)
     shields_remaining:  int = 4
     shields_reset_month: int = field(default_factory=lambda: date.today().month)
@@ -146,8 +156,10 @@ class UserState:
     def _reset_daily_xp_if_needed(self):
         today = date.today().isoformat()
         if self.last_reset_date < today:
-            self.daily_xp_today = 0
-            self.last_reset_date = today
+            self.daily_xp_today    = 0
+            self.sessions_today    = 0
+            self.overtime_xp_today = 0
+            self.last_reset_date   = today
 
     def _reset_shields_if_needed(self):
         current_month = date.today().month
@@ -220,10 +232,19 @@ class UserState:
           badge_earned   : new badge name if just earned, else None
           cap_reached    : True if daily cap was hit this session
           daily_total    : XP earned today after this addition
+          daily_cap      : effective cap (doubled on Gamer Boss Days)
         """
         self._reset_daily_xp_if_needed()
 
-        cap = get_daily_cap(self.primary_build.current_level)
+        level = self.primary_build.current_level
+        base_cap = get_daily_cap(level)
+
+        # Gamer build uses a Boss-Day-aware cap
+        if self.primary_build.build_type.value == "gamer":
+            cap = get_gamer_daily_cap(base_cap, self.current_streak)
+        else:
+            cap = base_cap
+
         available = max(0, cap - self.daily_xp_today)
         xp_to_add = min(amount, available)
 
@@ -326,6 +347,12 @@ class UserState:
 
             # Recent activity (last 5 logs)
             "recent_logs": [log.to_dict() for log in (recent_logs or [])[-5:]],
+
+            # Gamer-exclusive fields (only meaningful when primary_build == gamer)
+            "gamer_sessions_today":    self.sessions_today,
+            "gamer_overtime_xp_today": self.overtime_xp_today,
+            "gamer_overtime_remaining": max(0, GAMER_OVERTIME_LIMIT - self.overtime_xp_today),
+            "gamer_is_boss_day":       gamer_is_boss_day(self.current_streak),
         }
 
     def to_json(self) -> str:
@@ -343,5 +370,7 @@ class UserState:
             "last_reset_date":   self.last_reset_date,
             "shields_remaining": self.shields_remaining,
             "shields_reset_month": self.shields_reset_month,
+            "sessions_today":    self.sessions_today,
+            "overtime_xp_today": self.overtime_xp_today,
         }
         return json.dumps(data, indent=2)
