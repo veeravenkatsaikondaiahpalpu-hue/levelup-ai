@@ -1,8 +1,8 @@
 # ── Core ML & Training ─────────────────────────────────────────────
-torch>=2.2.0
-transformers>=4.40.0
-peft>=0.10.0                  # QLoRA / LoRA fine-tuning
-bitsandbytes>=0.43.0          # 4-bit quantization
+torch>=2.11.0
+transformers>=5.5.4
+peft>=0.19.1                  # QLoRA / LoRA fine-tuning
+bitsandbytes>=0.49.2          # 4-bit quantization
 accelerate>=0.29.0            # multi-GPU / mixed precision
 datasets>=2.18.0              # HuggingFace datasets
 trl>=0.8.0                    # SFTTrainer for fine-tuning
@@ -17,8 +17,7 @@ matplotlib>=3.8.0
 seaborn>=0.13.0
 imbalanced-learn>=0.12.0      # handle class imbalance in anomaly data
 
-# ── Sentiment Analysis (BERT motivation classifier) ─────────────────
-# uses transformers above + below
+# ── Sentiment Analysis ──────────────────────────────────────────────
 scipy>=1.13.0
 
 # ── Voice — Speech-to-Text ──────────────────────────────────────────
@@ -26,7 +25,7 @@ openai-whisper>=20231117      # local Whisper STT
 
 # ── Voice — Text-to-Speech ──────────────────────────────────────────
 elevenlabs>=1.2.0             # ElevenLabs TTS (demo quality)
-TTS>=0.22.0                   # Coqui TTS (local fallback)
+# TTS>=0.22.0                 # Coqui TTS — install separately if needed
 
 # ── API Backend ─────────────────────────────────────────────────────
 fastapi>=0.111.0
@@ -36,13 +35,13 @@ pydantic>=2.7.0
 
 # ── Database ────────────────────────────────────────────────────────
 sqlalchemy>=2.0.0
-aiosqlite>=0.20.0             # async SQLite for dev
+aiosqlite>=0.20.0
 
 # ── Utilities ───────────────────────────────────────────────────────
-python-dotenv>=1.0.0          # load .env variables
-httpx>=0.27.0                 # async HTTP client
-tqdm>=4.66.0                  # progress bars
-evaluate>=0.4.0               # BLEU score + other metrics
-rouge-score>=0.1.2            # response quality evaluation
-jupyter>=1.0.0                # notebooks
+python-dotenv>=1.0.0
+httpx>=0.27.0
+tqdm>=4.66.0
+evaluate>=0.4.0               # BLEU score + metrics
+rouge-score>=0.1.2
+jupyter>=1.0.0
 ipykernel>=6.29.0
