@@ -1,8 +1,13 @@
-# LevelUp AI — RPG Self-Improvement Platform
+# ⚔️ LevelUp — Gamify Your Entire Life
 
-> *Your life. Your build. Your legend.*
+> *Every grind earns XP. Every build earns a legend.*
 
-LevelUp turns real-life self-improvement into an RPG. Log workouts, study sessions, creative work, or meditation — earn XP, level up, unlock badges, and build your legend with an AI coach fine-tuned to your exact build.
+**LevelUp is a real-life RPG for everything you do.**
+Hit the gym? XP. Ship a side project? XP. Finish a chapter, paint something, meditate, rank up in-game, learn to code? **XP.**
+
+Most self-improvement apps lock you into one lane — fitness, productivity, or mindfulness. LevelUp covers all of it. Pick your **Build**, earn XP for the things you already do, and get coached by an AI that speaks your language — whether that's warrior intensity, scholarly precision, startup energy, or pure gaming hype.
+
+This isn't a fitness app. This isn't a productivity app. This is **your life, gamified.**
 
 ---
 
@@ -191,9 +196,11 @@ The next major evolution of LevelUp is turning it from a solo app into a **commu
 ## 👥 Team
 
 
+A team of 3 building the platform where **every aspect of your life** earns XP — strength, intelligence, creativity, wellness, hustle, dexterity, and gaming.
+
 | Role | Focus |
 |------|-------|
-| AI & Backend | Fine-tuning, XP engine, API |
+| AI & Backend | LLM fine-tuning, XP engine, FastAPI |
 | ML Models | Anomaly detection, sentiment classifier |
 | Mobile | React Native app, UI/UX |
 
