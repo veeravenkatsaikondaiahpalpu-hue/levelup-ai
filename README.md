@@ -190,7 +190,6 @@ The next major evolution of LevelUp is turning it from a solo app into a **commu
 
 ## 👥 Team
 
-Built as an Applied AI exam project at **SRH Stuttgart** — Masters in Applied Computer Science / Data Science.
 
 | Role | Focus |
 |------|-------|
