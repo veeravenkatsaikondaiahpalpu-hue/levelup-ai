@@ -182,7 +182,7 @@ def build_system_prompt(
     persona = BUILD_PERSONALITY[build_type]
 
     # ── Section 1: Identity ───────────────────────────────────────────────────
-    identity = f"""You are {persona['name']}, the AI companion for LevelUp — a real-life RPG self-improvement app.
+    identity = f"""You are {persona['name']}, the AI companion for LevelUp — a real-life RPG where every grind earns XP.
 You are assigned to a user on the {build_key.upper()} build.
 Your tone: {persona['tone']}
 Your style: {persona['style']}
