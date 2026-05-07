@@ -45,12 +45,19 @@ class ChatRequest(BaseModel):
     max_tokens:  int   = Field(default=512,  ge=50,  le=1024)
     temperature: float = Field(default=0.7,  ge=0.1, le=1.5)
 
+    # Audio response (ElevenLabs TTS)
+    audio: bool = Field(
+        default=False,
+        description="If true, return base64-encoded MP3 audio alongside the text reply",
+    )
+
 
 class ChatResponse(BaseModel):
     reply:      str
     build:      str
     latency_ms: int
     tokens_out: Optional[int] = None
+    audio_b64:  Optional[str] = None   # base64-encoded MP3 when audio=true is requested
 
 
 class HealthResponse(BaseModel):
@@ -129,8 +136,20 @@ async def chat(req: ChatRequest, model: LevelUpChat = Depends(get_model)):
     )
     latency = int((time.time() - t0) * 1000)
 
+    # Optional TTS audio
+    audio_b64: Optional[str] = None
+    if req.audio:
+        try:
+            import base64
+            from voice.tts import speak_async
+            audio_bytes = await speak_async(reply, build=build)
+            audio_b64 = base64.b64encode(audio_bytes).decode("utf-8")
+        except Exception as e:
+            print(f"[TTS] Warning: could not generate audio: {e}")
+
     return ChatResponse(
         reply=reply,
         build=build,
         latency_ms=latency,
+        audio_b64=audio_b64,
     )

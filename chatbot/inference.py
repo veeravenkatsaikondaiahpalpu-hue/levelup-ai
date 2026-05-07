@@ -9,10 +9,10 @@ Supports two modes:
 
 Usage:
   # Interactive CLI
-  python -m chatbot.inference --adapter models/final/levelup-qlora-all --build TITAN
+  python -m chatbot.inference --adapter models/final/levelup-qlora-cloud --build TITAN
 
   # One-shot test
-  python -m chatbot.inference --adapter models/final/levelup-qlora-all --build ORACLE \
+  python -m chatbot.inference --adapter models/final/levelup-qlora-cloud --build ORACLE \
       --message "Explain gradient descent in simple terms"
 """
 
@@ -37,8 +37,8 @@ from chatbot.prompt_template import (
 )
 
 # ── Default model paths ────────────────────────────────────────────────────────
-DEFAULT_BASE_MODEL  = "meta-llama/Meta-Llama-3-8B-Instruct"
-DEFAULT_ADAPTER_DIR = str(ROOT / "models" / "final" / "levelup-qlora-all")
+DEFAULT_BASE_MODEL  = "unsloth/Llama-3.2-3B-Instruct"          # matches fine-tuning base
+DEFAULT_ADAPTER_DIR = str(ROOT / "models" / "final" / "levelup-qlora-cloud")  # cloud-trained adapter
 
 
 # ── Model loader ───────────────────────────────────────────────────────────────
@@ -62,6 +62,7 @@ class LevelUpChat:
         self.adapter_path = adapter_path
         self.base_model   = base_model
         self.device       = device
+        self.load_in_4bit = load_in_4bit   # fix: was missing, caused AttributeError on load()
         self.model        = None
         self.tokenizer    = None
         self._loaded      = False

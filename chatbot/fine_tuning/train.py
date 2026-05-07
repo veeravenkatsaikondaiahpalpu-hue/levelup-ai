@@ -40,10 +40,13 @@ if _ROOT_ENV.exists():
             os.environ.setdefault(_k.strip(), _v.strip())
 
 _hf_token = os.environ.get("HF_TOKEN")
-if _hf_token:
-    from huggingface_hub import login as _hf_login
-    _hf_login(token=_hf_token, add_to_git_credential=False)
-    print(f"[HF] Logged in with token (len={len(_hf_token)})")
+if _hf_token and os.environ.get("HF_HUB_OFFLINE", "0") != "1":
+    try:
+        from huggingface_hub import login as _hf_login
+        _hf_login(token=_hf_token, add_to_git_credential=False)
+        print(f"[HF] Logged in with token (len={len(_hf_token)})")
+    except Exception as _e:
+        print(f"[HF] Login skipped ({_e.__class__.__name__}) — using cached model")
 
 import torch
 from datasets import Dataset
@@ -148,10 +151,10 @@ def train(
     resume_from:   str   = None,
     # Hyperparameters
     num_epochs:         int   = 3,
-    per_device_batch:   int   = 4,
-    gradient_accum:     int   = 4,
+    per_device_batch:   int   = 1,
+    gradient_accum:     int   = 16,
     learning_rate:      float = 2e-4,
-    max_seq_length:     int   = 2048,
+    max_seq_length:     int   = 512,
     lora_r:             int   = 16,
     lora_alpha:         int   = 32,
     lora_dropout:       float = 0.05,
@@ -219,10 +222,9 @@ def train(
         bf16=True,                              # bfloat16 mixed precision
         fp16=False,
 
-        # Sequence packing — packs multiple short samples into one 2048-token window
-        # massively improves GPU utilisation on short Q&A data
+        # Sequence length — keep short for 8GB VRAM (no packing to avoid OOM)
         max_length=max_seq_length,
-        packing=True,
+        packing=False,
 
         # Evaluation & saving
         eval_strategy="steps",
@@ -295,10 +297,10 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--resume_from",  default=None,
                    help="Resume from a checkpoint directory")
     p.add_argument("--epochs",       type=int,   default=3)
-    p.add_argument("--batch_size",   type=int,   default=4)
-    p.add_argument("--grad_accum",   type=int,   default=4)
+    p.add_argument("--batch_size",   type=int,   default=1)
+    p.add_argument("--grad_accum",   type=int,   default=16)
     p.add_argument("--lr",           type=float, default=2e-4)
-    p.add_argument("--max_seq_len",  type=int,   default=2048)
+    p.add_argument("--max_seq_len",  type=int,   default=512)
     p.add_argument("--lora_r",       type=int,   default=16)
     p.add_argument("--lora_alpha",   type=int,   default=32)
     return p.parse_args()

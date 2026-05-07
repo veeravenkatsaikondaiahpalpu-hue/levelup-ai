@@ -1,0 +1,1889 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⚔️ LevelUp AI Companion — Demo</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  /* ── Reset & Base ── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #0a0b1a;
+    --card:      #111827;
+    --card2:     #1a2035;
+    --border:    #1f2937;
+    --border2:   #2d3748;
+    --gold:      #f59e0b;
+    --gold-dark: #d97706;
+    --purple:    #8b5cf6;
+    --teal:      #06b6d4;
+    --green:     #10b981;
+    --red:       #ef4444;
+    --gray:      #6b7280;
+    --white:     #f9fafb;
+    --muted:     #9ca3af;
+    --font:      'Inter', system-ui, sans-serif;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--white);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── Animated background ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 800px 600px at 20% 10%, rgba(139,92,246,.07) 0%, transparent 70%),
+      radial-gradient(ellipse 600px 500px at 80% 80%, rgba(6,182,212,.05) 0%, transparent 70%),
+      radial-gradient(ellipse 400px 400px at 60% 30%, rgba(245,158,11,.04) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .page-wrap { position: relative; z-index: 1; }
+
+  /* ── Navbar ── */
+  .navbar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(10,11,26,.92);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .nav-brand {
+    font-size: 18px;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--gold), var(--purple));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    white-space: nowrap;
+    letter-spacing: -.3px;
+  }
+
+  .nav-spacer { flex: 1; }
+
+  .api-status-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .api-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--gray);
+    transition: background .4s;
+    flex-shrink: 0;
+  }
+  .api-dot.online  { background: var(--green); box-shadow: 0 0 6px var(--green); animation: pulse-dot 2s infinite; }
+  .api-dot.offline { background: var(--red);   box-shadow: 0 0 6px var(--red); }
+
+  @keyframes pulse-dot {
+    0%,100% { opacity: 1; } 50% { opacity: .5; }
+  }
+
+  .api-url-input {
+    background: var(--card);
+    border: 1px solid var(--border2);
+    color: var(--white);
+    font-family: var(--font);
+    font-size: 12px;
+    padding: 5px 10px;
+    border-radius: 6px;
+    width: 200px;
+    outline: none;
+    transition: border-color .2s;
+  }
+  .api-url-input:focus { border-color: var(--gold); }
+
+  /* ── Tabs ── */
+  .tabs-bar {
+    display: flex;
+    gap: 2px;
+    padding: 16px 24px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .tab-btn {
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 10px 18px;
+    cursor: pointer;
+    border-radius: 8px 8px 0 0;
+    transition: all .2s;
+    position: relative;
+    letter-spacing: .2px;
+  }
+  .tab-btn:hover { color: var(--white); background: rgba(255,255,255,.05); }
+  .tab-btn.active {
+    color: var(--gold);
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-bottom: 1px solid var(--card);
+    margin-bottom: -1px;
+  }
+
+  /* ── Content ── */
+  .content { padding: 28px 24px; max-width: 900px; margin: 0 auto; }
+
+  .tab-panel { display: none; animation: fade-in .3s ease; }
+  .tab-panel.active { display: block; }
+
+  @keyframes fade-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .card-title {
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .8px;
+    color: var(--muted);
+    margin-bottom: 14px;
+  }
+
+  /* ── Inputs ── */
+  textarea, input[type=number], input[type=range], select {
+    font-family: var(--font);
+  }
+
+  .textarea-input {
+    width: 100%;
+    background: var(--card2);
+    border: 1px solid var(--border2);
+    color: var(--white);
+    font-size: 14px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    resize: vertical;
+    outline: none;
+    transition: border-color .2s;
+    line-height: 1.6;
+  }
+  .textarea-input:focus { border-color: var(--purple); }
+  .textarea-input::placeholder { color: var(--gray); }
+
+  .num-input {
+    background: var(--card2);
+    border: 1px solid var(--border2);
+    color: var(--white);
+    font-size: 14px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    outline: none;
+    width: 100%;
+    transition: border-color .2s;
+  }
+  .num-input:focus { border-color: var(--teal); }
+
+  /* ── Buttons ── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-family: var(--font);
+    font-weight: 600;
+    font-size: 13px;
+    padding: 9px 18px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    transition: all .2s;
+    white-space: nowrap;
+  }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--gold), var(--gold-dark));
+    color: #000;
+  }
+  .btn-primary:hover:not(:disabled) {
+    background: linear-gradient(135deg, #fbbf24, var(--gold));
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(245,158,11,.35);
+  }
+
+  .btn-secondary {
+    background: var(--card2);
+    border: 1px solid var(--border2);
+    color: var(--white);
+  }
+  .btn-secondary:hover:not(:disabled) {
+    border-color: var(--gold);
+    color: var(--gold);
+  }
+
+  .btn-ghost {
+    background: transparent;
+    border: 1px solid var(--border2);
+    color: var(--muted);
+  }
+  .btn-ghost:hover:not(:disabled) { border-color: var(--border2); background: var(--card2); color: var(--white); }
+
+  .btn-sm { font-size: 12px; padding: 6px 12px; }
+
+  .quick-btns {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  /* ── Badges ── */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .6px;
+    padding: 4px 10px;
+    border-radius: 20px;
+  }
+  .badge-motivated { background: rgba(16,185,129,.15); color: var(--green); border: 1px solid rgba(16,185,129,.3); }
+  .badge-struggling { background: rgba(239,68,68,.15); color: var(--red); border: 1px solid rgba(239,68,68,.3); }
+  .badge-neutral    { background: rgba(107,114,128,.15); color: #d1d5db; border: 1px solid rgba(107,114,128,.3); }
+  .badge-anomaly    { background: rgba(239,68,68,.15); color: var(--red); border: 1px solid rgba(239,68,68,.3); }
+  .badge-normal     { background: rgba(16,185,129,.15); color: var(--green); border: 1px solid rgba(16,185,129,.3); }
+  .badge-gold       { background: rgba(245,158,11,.15); color: var(--gold); border: 1px solid rgba(245,158,11,.3); }
+  .badge-purple     { background: rgba(139,92,246,.15); color: var(--purple); border: 1px solid rgba(139,92,246,.3); }
+  .badge-teal       { background: rgba(6,182,212,.15); color: var(--teal); border: 1px solid rgba(6,182,212,.3); }
+
+  /* Big label ── */
+  .result-label {
+    font-size: 28px;
+    font-weight: 900;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+  }
+  .result-label.motivated { color: var(--green); }
+  .result-label.struggling { color: var(--red); }
+  .result-label.neutral    { color: #d1d5db; }
+  .result-label.anomaly    { color: var(--red); }
+  .result-label.normal     { color: var(--green); }
+
+  /* ── Progress bars ── */
+  .progress-wrap { margin: 6px 0; }
+  .progress-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .progress-track {
+    height: 6px;
+    background: var(--card2);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width .7s cubic-bezier(.4,0,.2,1);
+  }
+  .pf-green  { background: linear-gradient(90deg, #059669, var(--green)); }
+  .pf-red    { background: linear-gradient(90deg, #dc2626, var(--red)); }
+  .pf-gray   { background: linear-gradient(90deg, #4b5563, var(--gray)); }
+  .pf-gold   { background: linear-gradient(90deg, var(--gold-dark), var(--gold)); }
+  .pf-purple { background: linear-gradient(90deg, #7c3aed, var(--purple)); }
+  .pf-teal   { background: linear-gradient(90deg, #0891b2, var(--teal)); }
+
+  /* ── Result area ── */
+  .result-card {
+    background: var(--card2);
+    border: 1px solid var(--border2);
+    border-radius: 12px;
+    padding: 20px;
+    animation: fade-in .4s ease;
+    display: none;
+  }
+  .result-card.visible { display: block; }
+
+  .result-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    gap: 12px;
+  }
+
+  /* ── Model table ── */
+  .model-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    margin-top: 14px;
+  }
+  .model-table th {
+    text-align: left;
+    color: var(--muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    font-size: 11px;
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .model-table td {
+    padding: 7px 8px;
+    border-bottom: 1px solid rgba(31,41,55,.5);
+    vertical-align: middle;
+  }
+  .model-table tr:last-child td { border-bottom: none; }
+  .model-name { color: var(--muted); font-family: 'Courier New', monospace; font-size: 11.5px; }
+  .model-name.best { color: var(--gold); font-weight: 700; }
+
+  .mini-bar-wrap { display: flex; align-items: center; gap: 8px; }
+  .mini-track {
+    flex: 1; height: 4px;
+    background: var(--card);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .mini-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width .6s ease;
+  }
+  .mini-pct { font-size: 11px; color: var(--white); min-width: 38px; text-align: right; }
+
+  /* ── Anomaly inputs grid ── */
+  .inputs-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .input-group label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    margin-bottom: 5px;
+  }
+  .slider-row { display: flex; align-items: center; gap: 8px; }
+  .slider-row input[type=range] { flex: 1; accent-color: var(--teal); }
+  .slider-val {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--teal);
+    min-width: 38px;
+    text-align: right;
+  }
+
+  /* ── XP Calculator ── */
+  .build-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .build-card {
+    background: var(--card2);
+    border: 2px solid var(--border2);
+    border-radius: 10px;
+    padding: 10px 6px;
+    text-align: center;
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .build-card:hover { border-color: var(--gold); transform: translateY(-2px); }
+  .build-card.selected {
+    border-color: var(--gold);
+    background: rgba(245,158,11,.08);
+    box-shadow: 0 0 12px rgba(245,158,11,.2);
+  }
+  .build-card .build-emoji { font-size: 22px; display: block; margin-bottom: 4px; }
+  .build-card .build-name { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; color: var(--muted); }
+  .build-card.selected .build-name { color: var(--gold); }
+
+  .intensity-row { display: flex; gap: 8px; }
+  .intensity-btn {
+    flex: 1;
+    background: var(--card2);
+    border: 2px solid var(--border2);
+    color: var(--muted);
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all .2s;
+    text-align: center;
+  }
+  .intensity-btn:hover { border-color: var(--gold); color: var(--white); }
+  .intensity-btn.selected {
+    border-color: var(--gold);
+    color: var(--gold);
+    background: rgba(245,158,11,.08);
+  }
+
+  .xp-result-big {
+    font-size: 56px;
+    font-weight: 900;
+    background: linear-gradient(135deg, var(--gold), var(--purple));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .xp-label { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .6px; }
+
+  .formula-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    margin-top: 14px;
+  }
+  .formula-table td {
+    padding: 6px 8px;
+    border-bottom: 1px solid rgba(31,41,55,.5);
+  }
+  .formula-table td:first-child { color: var(--muted); font-size: 11px; }
+  .formula-table td:last-child { color: var(--white); font-weight: 600; text-align: right; }
+  .formula-table tr:last-child td { border-bottom: none; color: var(--gold); font-size: 14px; }
+
+  .select-input {
+    width: 100%;
+    background: var(--card2);
+    border: 1px solid var(--border2);
+    color: var(--white);
+    font-family: var(--font);
+    font-size: 13px;
+    padding: 9px 12px;
+    border-radius: 8px;
+    outline: none;
+    cursor: pointer;
+    transition: border-color .2s;
+  }
+  .select-input:focus { border-color: var(--gold); }
+  .select-input option { background: #1a2035; }
+
+  /* ── Chat ── */
+  .chat-build-row {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+  .chat-build-btn {
+    background: var(--card2);
+    border: 1.5px solid var(--border2);
+    color: var(--muted);
+    font-family: var(--font);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 6px 11px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .chat-build-btn:hover { border-color: var(--gold); color: var(--white); }
+  .chat-build-btn.selected {
+    border-color: var(--gold);
+    background: rgba(245,158,11,.1);
+    color: var(--gold);
+  }
+
+  .chat-messages {
+    height: 340px;
+    overflow-y: auto;
+    background: var(--card2);
+    border: 1px solid var(--border2);
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 10px;
+    scroll-behavior: smooth;
+  }
+  .chat-messages::-webkit-scrollbar { width: 4px; }
+  .chat-messages::-webkit-scrollbar-track { background: transparent; }
+  .chat-messages::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+  .chat-msg {
+    margin-bottom: 14px;
+    animation: fade-in .25s ease;
+  }
+  .msg-user {
+    display: flex;
+    justify-content: flex-end;
+  }
+  .msg-user .bubble {
+    background: linear-gradient(135deg, #4c1d95, var(--purple));
+    color: var(--white);
+    padding: 10px 14px;
+    border-radius: 14px 14px 2px 14px;
+    max-width: 75%;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .msg-ai {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .ai-avatar {
+    width: 32px; height: 32px;
+    background: linear-gradient(135deg, var(--gold), var(--purple));
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+  .msg-ai .bubble {
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--white);
+    padding: 10px 14px;
+    border-radius: 2px 14px 14px 14px;
+    max-width: 80%;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  .msg-meta {
+    font-size: 10px;
+    color: var(--gray);
+    margin-top: 4px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .chat-input-row {
+    display: flex;
+    gap: 8px;
+  }
+  .chat-text-input {
+    flex: 1;
+    background: var(--card2);
+    border: 1px solid var(--border2);
+    color: var(--white);
+    font-family: var(--font);
+    font-size: 13px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    outline: none;
+    transition: border-color .2s;
+  }
+  .chat-text-input:focus { border-color: var(--purple); }
+  .chat-text-input::placeholder { color: var(--gray); }
+
+  .sentiment-hint {
+    font-size: 11px;
+    margin-top: 6px;
+    min-height: 16px;
+    color: var(--gray);
+    transition: color .3s;
+  }
+  .sentiment-hint.motivated { color: var(--green); }
+  .sentiment-hint.struggling { color: var(--red); }
+  .sentiment-hint.neutral    { color: var(--muted); }
+
+  /* ── Spinner ── */
+  .spinner {
+    display: inline-block;
+    width: 14px; height: 14px;
+    border: 2px solid rgba(0,0,0,.2);
+    border-top-color: currentColor;
+    border-radius: 50%;
+    animation: spin .6s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .spinner-lg {
+    width: 24px; height: 24px;
+    border: 3px solid rgba(245,158,11,.15);
+    border-top-color: var(--gold);
+    border-radius: 50%;
+    animation: spin .8s linear infinite;
+    margin: 20px auto;
+  }
+
+  /* ── Divider ── */
+  .divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+
+  /* ── Preset buttons ── */
+  .preset-bar {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+  .preset-btn {
+    background: var(--card2);
+    border: 1px solid var(--border2);
+    color: var(--muted);
+    font-family: var(--font);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 7px 14px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .preset-btn:hover { border-color: var(--teal); color: var(--teal); }
+
+  /* ── Metrics Banner ── */
+  .metrics-section {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 24px 40px;
+  }
+
+  .metrics-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .metrics-title::before, .metrics-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .metrics-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+  }
+
+  .metrics-card-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .6px;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+
+  .perf-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  .perf-table th {
+    text-align: left;
+    color: var(--gray);
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    padding: 4px 6px;
+    border-bottom: 1px solid var(--border);
+  }
+  .perf-table th:not(:first-child) { text-align: right; }
+  .perf-table td {
+    padding: 5px 6px;
+    border-bottom: 1px solid rgba(31,41,55,.4);
+    font-size: 11.5px;
+  }
+  .perf-table td:not(:first-child) { text-align: right; color: var(--muted); }
+  .perf-table tr.best td { color: var(--gold) !important; font-weight: 700; }
+  .perf-table tr.best td:first-child::after { content: ' ★'; }
+  .perf-table tr:last-child td { border-bottom: none; }
+
+  .anomaly-stats { display: flex; gap: 12px; }
+  .anomaly-stat {
+    flex: 1;
+    text-align: center;
+    padding: 12px;
+    background: var(--card2);
+    border-radius: 8px;
+    border: 1px solid var(--border2);
+  }
+  .anomaly-stat .stat-num {
+    font-size: 22px;
+    font-weight: 900;
+    color: var(--green);
+  }
+  .anomaly-stat .stat-label {
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    margin-top: 2px;
+  }
+
+  /* ── Offline badge ── */
+  .offline-notice {
+    display: none;
+    background: rgba(239,68,68,.1);
+    border: 1px solid rgba(239,68,68,.25);
+    color: var(--red);
+    font-size: 12px;
+    padding: 8px 14px;
+    border-radius: 8px;
+    margin-bottom: 14px;
+    align-items: center;
+    gap: 8px;
+  }
+  .offline-notice.visible { display: flex; }
+
+  /* ── Rows / flex helpers ── */
+  .row { display: flex; gap: 12px; align-items: flex-start; }
+  .row > * { flex: 1; }
+  .mt-1 { margin-top: 6px; }
+  .mt-2 { margin-top: 12px; }
+  .mt-3 { margin-top: 16px; }
+
+  /* ── Flag row ── */
+  .flag-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+
+  /* ── Empty state ── */
+  .empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--gray);
+    font-size: 13px;
+  }
+  .empty-state .empty-icon { font-size: 36px; margin-bottom: 10px; opacity: .5; }
+
+  /* ── Tooltip ── */
+  [title] { cursor: help; }
+
+  /* Responsive */
+  @media (max-width: 720px) {
+    .build-cards-grid { grid-template-columns: repeat(4, 1fr); }
+    .inputs-grid { grid-template-columns: 1fr; }
+    .metrics-grid { grid-template-columns: 1fr; }
+    .navbar { padding: 0 14px; gap: 10px; }
+    .api-url-input { width: 140px; }
+    .content { padding: 16px 14px; }
+  }
+</style>
+</head>
+<body>
+<div class="page-wrap">
+
+<!-- ══ NAVBAR ══ -->
+<nav class="navbar">
+  <span class="nav-brand">⚔️ LevelUp AI</span>
+  <div class="nav-spacer"></div>
+  <div class="api-status-wrap">
+    <div class="api-dot" id="apiDot"></div>
+    <span id="apiStatusText">Checking…</span>
+  </div>
+  <input class="api-url-input" id="apiBaseInput" type="text" value="http://localhost:8000" placeholder="API base URL" title="API base URL">
+</nav>
+
+<!-- ══ TABS ══ -->
+<div class="tabs-bar">
+  <button class="tab-btn active" onclick="switchTab('sentiment')">🧠 Sentiment</button>
+  <button class="tab-btn" onclick="switchTab('anomaly')">🔍 Anomaly Detection</button>
+  <button class="tab-btn" onclick="switchTab('xp')">⚡ XP Calculator</button>
+  <button class="tab-btn" onclick="switchTab('chat')">💬 Chat Demo</button>
+</div>
+
+<!-- ══ CONTENT ══ -->
+<div class="content">
+
+  <!-- ── Tab 1: Sentiment ── -->
+  <div class="tab-panel active" id="tab-sentiment">
+    <div class="card">
+      <div class="card-title">Sentiment Analyzer</div>
+      <div class="offline-notice" id="sentOffline">
+        <span>⚠</span> API offline — connect a backend at the URL above to enable live analysis.
+      </div>
+      <div class="quick-btns">
+        <button class="btn btn-ghost btn-sm" onclick="setExample('struggling')">I'm struggling 😔</button>
+        <button class="btn btn-ghost btn-sm" onclick="setExample('motivated')">Crushed it today! 💪</button>
+        <button class="btn btn-ghost btn-sm" onclick="setExample('neutral')">Normal day 📝</button>
+      </div>
+      <textarea class="textarea-input" id="sentText" rows="4"
+        placeholder="Type something like: 'I feel so exhausted today, can't seem to get motivated to work out at all…'"></textarea>
+      <div class="mt-2">
+        <button class="btn btn-primary" id="sentBtn" onclick="analyzeSentiment()">
+          <span id="sentBtnIcon">✨</span> Analyze Sentiment
+        </button>
+      </div>
+    </div>
+
+    <div class="result-card" id="sentResult">
+      <div class="result-top">
+        <div>
+          <div class="result-label" id="sentLabel">—</div>
+          <div id="sentConfText" style="font-size:13px;color:var(--muted);">Confidence</div>
+        </div>
+        <div id="sentFlagBadge"></div>
+      </div>
+
+      <div class="progress-wrap" id="sentConfBar">
+        <div class="progress-label"><span>Confidence</span><span id="sentConfPct">—</span></div>
+        <div class="progress-track"><div class="progress-fill" id="sentConfFill" style="width:0%"></div></div>
+      </div>
+
+      <hr class="divider">
+      <div class="card-title">Class Probabilities</div>
+      <div id="sentProbs"></div>
+
+      <hr class="divider">
+      <div class="card-title">All Models</div>
+      <table class="model-table" id="sentModelsTable">
+        <thead>
+          <tr>
+            <th>Model</th>
+            <th>Label</th>
+            <th style="width:45%">Confidence</th>
+          </tr>
+        </thead>
+        <tbody id="sentModelsTbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── Tab 2: Anomaly Detection ── -->
+  <div class="tab-panel" id="tab-anomaly">
+    <div class="card">
+      <div class="card-title">Anomaly Detection</div>
+      <div class="offline-notice" id="anomalyOffline">
+        <span>⚠</span> API offline — connect a backend to enable live detection.
+      </div>
+      <div class="preset-bar">
+        <button class="preset-btn" onclick="loadPreset('normal')">✅ Normal User</button>
+        <button class="preset-btn" onclick="loadPreset('grinder')">🔥 XP Grinder</button>
+        <button class="preset-btn" onclick="loadPreset('spoofer')">🎭 Intensity Spoofer</button>
+        <button class="preset-btn" onclick="loadPreset('streak')">♾️ Impossible Streak</button>
+      </div>
+
+      <div class="inputs-grid">
+        <div class="input-group">
+          <label>Activities Per Day <span style="color:var(--teal)">(0–20)</span></label>
+          <div class="slider-row">
+            <input type="range" min="0" max="20" step="1" id="sl_apd" value="3" oninput="syncSlider('apd')">
+            <span class="slider-val" id="sv_apd">3</span>
+          </div>
+          <input class="num-input mt-1" type="number" id="in_apd" value="3" min="0" max="20" oninput="syncInput('apd')">
+        </div>
+        <div class="input-group">
+          <label>Daily XP Total <span style="color:var(--teal)">(0–1000)</span></label>
+          <div class="slider-row">
+            <input type="range" min="0" max="1000" step="10" id="sl_xp" value="280" oninput="syncSlider('xp')">
+            <span class="slider-val" id="sv_xp">280</span>
+          </div>
+          <input class="num-input mt-1" type="number" id="in_xp" value="280" min="0" max="1000" oninput="syncInput('xp')">
+        </div>
+        <div class="input-group">
+          <label>Streak Gap Days <span style="color:var(--teal)">(0–10)</span></label>
+          <div class="slider-row">
+            <input type="range" min="0" max="10" step="1" id="sl_gap" value="0" oninput="syncSlider('gap')">
+            <span class="slider-val" id="sv_gap">0</span>
+          </div>
+          <input class="num-input mt-1" type="number" id="in_gap" value="0" min="0" max="10" oninput="syncInput('gap')">
+        </div>
+        <div class="input-group">
+          <label>Intensity Switch Rate <span style="color:var(--teal)">(0–1)</span></label>
+          <div class="slider-row">
+            <input type="range" min="0" max="1" step="0.01" id="sl_isr" value="0.2" oninput="syncSlider('isr')">
+            <span class="slider-val" id="sv_isr">0.20</span>
+          </div>
+          <input class="num-input mt-1" type="number" id="in_isr" value="0.2" min="0" max="1" step="0.01" oninput="syncInput('isr')">
+        </div>
+        <div class="input-group">
+          <label>Avg Session Duration <span style="color:var(--teal)">(0–300 min)</span></label>
+          <div class="slider-row">
+            <input type="range" min="0" max="300" step="1" id="sl_avg" value="55" oninput="syncSlider('avg')">
+            <span class="slider-val" id="sv_avg">55</span>
+          </div>
+          <input class="num-input mt-1" type="number" id="in_avg" value="55" min="0" max="300" oninput="syncInput('avg')">
+        </div>
+        <div class="input-group">
+          <label>Max Session Duration <span style="color:var(--teal)">(0–600 min)</span></label>
+          <div class="slider-row">
+            <input type="range" min="0" max="600" step="1" id="sl_max" value="65" oninput="syncSlider('max')">
+            <span class="slider-val" id="sv_max">65</span>
+          </div>
+          <input class="num-input mt-1" type="number" id="in_max" value="65" min="0" max="600" oninput="syncInput('max')">
+        </div>
+        <div class="input-group">
+          <label>Sessions at Cap Ratio <span style="color:var(--teal)">(0–1)</span></label>
+          <div class="slider-row">
+            <input type="range" min="0" max="1" step="0.01" id="sl_sacr" value="0.4" oninput="syncSlider('sacr')">
+            <span class="slider-val" id="sv_sacr">0.40</span>
+          </div>
+          <input class="num-input mt-1" type="number" id="in_sacr" value="0.4" min="0" max="1" step="0.01" oninput="syncInput('sacr')">
+        </div>
+        <div class="input-group">
+          <label>XP Per Minute <span style="color:var(--teal)">(0–10)</span></label>
+          <div class="slider-row">
+            <input type="range" min="0" max="10" step="0.1" id="sl_xpm" value="1.2" oninput="syncSlider('xpm')">
+            <span class="slider-val" id="sv_xpm">1.2</span>
+          </div>
+          <input class="num-input mt-1" type="number" id="in_xpm" value="1.2" min="0" max="10" step="0.1" oninput="syncInput('xpm')">
+        </div>
+      </div>
+      <div class="mt-3">
+        <button class="btn btn-primary" id="anomalyBtn" onclick="checkAnomaly()">
+          <span id="anomalyBtnIcon">🔍</span> Check for Anomalies
+        </button>
+      </div>
+    </div>
+
+    <div class="result-card" id="anomalyResult">
+      <div class="result-top">
+        <div>
+          <div class="result-label" id="anomalyLabel">—</div>
+          <div id="anomalyTypeChip" style="margin-top:6px;"></div>
+        </div>
+        <div id="anomalyConfBadge"></div>
+      </div>
+      <div class="progress-wrap">
+        <div class="progress-label"><span>Confidence</span><span id="anomalyConfPct">—</span></div>
+        <div class="progress-track"><div class="progress-fill" id="anomalyConfFill" style="width:0%"></div></div>
+      </div>
+      <hr class="divider">
+      <div class="card-title">All Models</div>
+      <table class="model-table">
+        <thead>
+          <tr><th>Model</th><th>Prediction</th><th style="width:45%">Confidence</th></tr>
+        </thead>
+        <tbody id="anomalyModelsTbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── Tab 3: XP Calculator ── -->
+  <div class="tab-panel" id="tab-xp">
+    <div class="card">
+      <div class="card-title">Select Your Build</div>
+      <div class="build-cards-grid" id="xpBuildGrid"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Activity Details</div>
+      <div class="row">
+        <div>
+          <div class="input-group">
+            <label>Activity</label>
+            <select class="select-input" id="xpActivity" onchange="updateRelevance()"></select>
+          </div>
+          <div id="xpRelevanceBadge" style="margin-top:8px;"></div>
+        </div>
+        <div>
+          <div class="input-group">
+            <label>Intensity</label>
+            <div class="intensity-row" style="margin-top:0">
+              <button class="intensity-btn selected" onclick="selectIntensity('light', this)">Light<br><small style="font-size:10px;opacity:.7">1.0×</small></button>
+              <button class="intensity-btn" onclick="selectIntensity('moderate', this)">Moderate<br><small style="font-size:10px;opacity:.7">1.5×</small></button>
+              <button class="intensity-btn" onclick="selectIntensity('intense', this)">Intense<br><small style="font-size:10px;opacity:.7">2.0×</small></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-2">
+        <div class="input-group">
+          <label>Duration — <span id="durationVal" style="color:var(--gold)">45 min</span></label>
+          <input type="range" min="5" max="240" step="5" id="xpDuration" value="45"
+            oninput="document.getElementById('durationVal').textContent=this.value+' min'"
+            style="width:100%;accent-color:var(--gold);margin-top:6px">
+        </div>
+      </div>
+
+      <div class="mt-2">
+        <div class="input-group">
+          <label>Current Streak (days)</label>
+          <div class="slider-row">
+            <input type="range" min="0" max="60" step="1" id="xpStreakSlider" value="0"
+              oninput="document.getElementById('xpStreakNum').value=this.value; document.getElementById('streakMult').textContent=getStreakMult(+this.value)+'×'">
+            <span class="slider-val" id="streakMult" style="color:var(--gold)">1.0×</span>
+          </div>
+          <input class="num-input mt-1" type="number" id="xpStreakNum" value="0" min="0" max="60"
+            oninput="document.getElementById('xpStreakSlider').value=this.value; document.getElementById('streakMult').textContent=getStreakMult(+this.value)+'×'">
+        </div>
+      </div>
+
+      <div class="mt-3">
+        <button class="btn btn-primary" onclick="calcXP()">⚡ Calculate XP</button>
+      </div>
+    </div>
+
+    <div class="result-card" id="xpResult">
+      <div style="display:flex;align-items:flex-end;gap:10px;margin-bottom:4px">
+        <div class="xp-result-big" id="xpResultNum">0</div>
+        <div class="xp-label" style="margin-bottom:10px">XP</div>
+      </div>
+      <div id="xpCapNote" style="font-size:11px;color:var(--muted);margin-bottom:14px;"></div>
+      <table class="formula-table" id="xpFormulaTable">
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── Tab 4: Chat Demo ── -->
+  <div class="tab-panel" id="tab-chat">
+    <div class="card">
+      <div class="card-title">Select Build</div>
+      <div class="chat-build-row" id="chatBuildRow"></div>
+    </div>
+    <div class="card" style="padding-bottom:14px">
+      <div class="offline-notice" id="chatOffline">
+        <span>⚠</span> Chat API offline — connect a backend to enable live responses.
+      </div>
+      <div class="offline-notice" id="chatModelNotice" style="display:none;background:rgba(245,158,11,.08);border-color:rgba(245,158,11,.3)">
+        <span>🧠</span> LLM not loaded — restart server with <code style="background:rgba(255,255,255,.1);padding:1px 5px;border-radius:3px">LEVELUP_LOAD_MODEL=true</code> to enable chat.
+      </div>
+      <div class="chat-messages" id="chatMessages">
+        <div class="empty-state">
+          <div class="empty-icon">⚔️</div>
+          <div>Select a build and start chatting with your AI companion!</div>
+        </div>
+      </div>
+      <div class="chat-input-row">
+        <input class="chat-text-input" id="chatInput" type="text"
+          placeholder="Ask your companion anything…"
+          oninput="debounceSentiment(this.value)"
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat();}">
+        <button class="btn btn-primary" onclick="sendChat()" id="chatSendBtn">Send</button>
+        <button class="btn btn-ghost" onclick="clearChat()">Clear</button>
+      </div>
+      <div class="sentiment-hint" id="chatSentHint"></div>
+    </div>
+  </div>
+
+</div><!-- /content -->
+
+<!-- ══ METRICS BANNER ══ -->
+<div class="metrics-section">
+  <div class="metrics-title">Model Performance Metrics</div>
+  <div class="metrics-grid">
+    <div class="metrics-card">
+      <div class="metrics-card-title">🧠 Sentiment Classification</div>
+      <table class="perf-table">
+        <thead>
+          <tr>
+            <th>Model</th>
+            <th>Acc</th>
+            <th>Macro F1</th>
+            <th>Struggling F1</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Logistic Regression</td><td>77.0%</td><td>0.771</td><td>0.802</td></tr>
+          <tr><td>Linear SVC</td><td>77.3%</td><td>0.774</td><td>0.809</td></tr>
+          <tr><td>XGBoost</td><td>78.0%</td><td>0.781</td><td>0.789</td></tr>
+          <tr><td>LightGBM</td><td>79.0%</td><td>0.791</td><td>0.802</td></tr>
+          <tr><td>Voting Ensemble</td><td>79.4%</td><td>0.795</td><td>0.815</td></tr>
+          <tr class="best"><td>Stacking Ensemble</td><td>79.9%</td><td>0.799</td><td>0.817</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="metrics-card">
+      <div class="metrics-card-title">🔍 Anomaly Detection</div>
+      <div class="anomaly-stats">
+        <div class="anomaly-stat">
+          <div class="stat-num">99.95%</div>
+          <div class="stat-label">Accuracy</div>
+        </div>
+        <div class="anomaly-stat">
+          <div class="stat-num">100%</div>
+          <div class="stat-label">Recall</div>
+        </div>
+        <div class="anomaly-stat">
+          <div class="stat-num" style="color:var(--gold)">0</div>
+          <div class="stat-label">False Negatives</div>
+        </div>
+      </div>
+      <div style="margin-top:14px">
+        <div class="progress-wrap">
+          <div class="progress-label"><span>Accuracy</span><span style="color:var(--green)">99.95%</span></div>
+          <div class="progress-track"><div class="progress-fill pf-green" style="width:99.95%"></div></div>
+        </div>
+        <div class="progress-wrap">
+          <div class="progress-label"><span>Recall (cheat detection)</span><span style="color:var(--green)">100%</span></div>
+          <div class="progress-track"><div class="progress-fill pf-green" style="width:100%"></div></div>
+        </div>
+        <div class="progress-wrap">
+          <div class="progress-label"><span>Precision</span><span style="color:var(--teal)">~99.8%</span></div>
+          <div class="progress-track"><div class="progress-fill pf-teal" style="width:99.8%"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /page-wrap -->
+
+<script>
+/* ══════════════════════════════════════════════
+   CONFIG & STATE
+══════════════════════════════════════════════ */
+let API_BASE = 'http://localhost:8000';
+let apiOnline = false;
+let chatHistory = [];
+let selectedBuild = 'strength';
+let xpBuild = 'strength';
+let xpIntensity = 'light';
+let sentDebounceTimer = null;
+
+const BUILDS = [
+  { id:'strength',    emoji:'⚔️',  name:'TITAN' },
+  { id:'intelligence',emoji:'🧠',  name:'ORACLE' },
+  { id:'dexterity',   emoji:'👁️',  name:'PHANTOM' },
+  { id:'wellness',    emoji:'🌿',  name:'SAGE' },
+  { id:'creative',    emoji:'🎨',  name:'MUSE' },
+  { id:'entrepreneur',emoji:'💼',  name:'EMPIRE' },
+  { id:'gamer',       emoji:'🎮',  name:'GG' },
+];
+
+const PRIMARY_ACTIVITIES = {
+  strength:     ['gym_session','running','swimming','sports','martial_arts'],
+  intelligence: ['study_session','reading','online_course','research','coding_sprint'],
+  dexterity:    ['martial_arts','sports','instrument_practice','typing_practice','coding_sprint','apm_training'],
+  wellness:     ['yoga','meditation','sleep_tracking','nutrition_tracking','journaling'],
+  creative:     ['art_session','writing','music_production','design_work','photography','instrument_practice'],
+  entrepreneur: ['networking','business_task','cold_outreach','pitch_practice','coding_sprint','writing'],
+  gamer:        ['competitive_gaming','speedrunning','esports_practice','tournament_play','puzzle_games','apm_training','game_design','streaming'],
+};
+
+const ACTIVITIES = [
+  { group:'Physical',         id:'gym_session',         label:'Gym Session' },
+  { group:'Physical',         id:'running',             label:'Running' },
+  { group:'Physical',         id:'swimming',            label:'Swimming' },
+  { group:'Physical',         id:'sports',              label:'Sports' },
+  { group:'Physical',         id:'martial_arts',        label:'Martial Arts' },
+  { group:'Mental / Study',   id:'study_session',       label:'Study Session' },
+  { group:'Mental / Study',   id:'reading',             label:'Reading' },
+  { group:'Mental / Study',   id:'online_course',       label:'Online Course' },
+  { group:'Mental / Study',   id:'research',            label:'Research' },
+  { group:'Skills',           id:'coding_sprint',       label:'Coding Sprint' },
+  { group:'Skills',           id:'typing_practice',     label:'Typing Practice' },
+  { group:'Skills',           id:'instrument_practice', label:'Instrument Practice' },
+  { group:'Skills',           id:'apm_training',        label:'APM Training' },
+  { group:'Wellness',         id:'yoga',                label:'Yoga' },
+  { group:'Wellness',         id:'meditation',          label:'Meditation' },
+  { group:'Wellness',         id:'sleep_tracking',      label:'Sleep Tracking' },
+  { group:'Wellness',         id:'nutrition_tracking',  label:'Nutrition Tracking' },
+  { group:'Wellness',         id:'journaling',          label:'Journaling' },
+  { group:'Creative',         id:'art_session',         label:'Art Session' },
+  { group:'Creative',         id:'writing',             label:'Writing' },
+  { group:'Creative',         id:'music_production',    label:'Music Production' },
+  { group:'Creative',         id:'design_work',         label:'Design Work' },
+  { group:'Creative',         id:'photography',         label:'Photography' },
+  { group:'Entrepreneur',     id:'networking',          label:'Networking' },
+  { group:'Entrepreneur',     id:'business_task',       label:'Business Task' },
+  { group:'Entrepreneur',     id:'cold_outreach',       label:'Cold Outreach' },
+  { group:'Entrepreneur',     id:'pitch_practice',      label:'Pitch Practice' },
+  { group:'GAMER',            id:'competitive_gaming',  label:'Competitive Gaming' },
+  { group:'GAMER',            id:'speedrunning',        label:'Speedrunning' },
+  { group:'GAMER',            id:'esports_practice',    label:'Esports Practice' },
+  { group:'GAMER',            id:'tournament_play',     label:'Tournament Play' },
+  { group:'GAMER',            id:'puzzle_games',        label:'Puzzle Games' },
+  { group:'GAMER',            id:'game_design',         label:'Game Design' },
+  { group:'GAMER',            id:'streaming',           label:'Streaming' },
+];
+
+const EXAMPLES = {
+  struggling: "I've been so exhausted lately, I can't find any motivation to keep up with my workout routine. Everything feels like such a struggle and I'm falling behind on all my goals.",
+  motivated:  "Just crushed a 90-minute gym session — new personal best on bench press! Feeling unstoppable. The grind is absolutely paying off and I'm ready for more!",
+  neutral:    "Did my usual 45 minute run this morning. Weather was okay. Going to do some reading this evening and maybe some light stretching.",
+};
+
+const PRESETS = {
+  normal:  { apd:3,  xp:280, gap:0, isr:0.2,  avg:55, max:65,  sacr:0.4,  xpm:1.2 },
+  grinder: { apd:14, xp:950, gap:0, isr:0.6,  avg:18, max:25,  sacr:1.0,  xpm:2.8 },
+  spoofer: { apd:4,  xp:380, gap:0, isr:0.95, avg:50, max:60,  sacr:0.5,  xpm:2.1 },
+  streak:  { apd:2,  xp:200, gap:5, isr:0.1,  avg:60, max:70,  sacr:0.2,  xpm:0.9 },
+};
+
+const MODEL_LABELS = {
+  logistic_regression: 'Logistic Regression',
+  linear_svc:          'Linear SVC',
+  xgboost:             'XGBoost',
+  lightgbm:            'LightGBM',
+  voting_ensemble:     'Voting Ensemble',
+  stacking_ensemble:   'Stacking Ensemble ★',
+};
+
+/* ══════════════════════════════════════════════
+   INIT
+══════════════════════════════════════════════ */
+document.getElementById('apiBaseInput').addEventListener('change', function() {
+  API_BASE = this.value.trim().replace(/\/$/, '');
+  checkApiHealth();
+});
+
+function getApiBase() {
+  return document.getElementById('apiBaseInput').value.trim().replace(/\/$/, '');
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  buildXpGrid();
+  buildXpActivitySelect();
+  buildChatBuilds();
+  checkApiHealth();
+});
+
+/* ══════════════════════════════════════════════
+   TABS
+══════════════════════════════════════════════ */
+function switchTab(name) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  event.currentTarget.classList.add('active');
+}
+
+/* ══════════════════════════════════════════════
+   API HEALTH
+══════════════════════════════════════════════ */
+async function checkApiHealth() {
+  const dot  = document.getElementById('apiDot');
+  const text = document.getElementById('apiStatusText');
+  dot.className = 'api-dot';
+  text.textContent = 'Checking…';
+  try {
+    const res = await fetch(getApiBase() + '/api/sentiment/health', { signal: AbortSignal.timeout(4000) });
+    if (res.ok) {
+      apiOnline = true;
+      dot.className = 'api-dot online';
+      text.textContent = 'API Online';
+      setOfflineNotices(false);
+      // Check chat model separately — API can be online but LLM not loaded
+      checkChatModelStatus();
+    } else throw new Error();
+  } catch {
+    apiOnline = false;
+    dot.className = 'api-dot offline';
+    text.textContent = 'API Offline';
+    setOfflineNotices(true);
+  }
+}
+
+async function checkChatModelStatus() {
+  try {
+    const res = await fetch(getApiBase() + '/api/chat/health', { signal: AbortSignal.timeout(4000) });
+    if (res.ok) {
+      const data = await res.json();
+      const notice = document.getElementById('chatModelNotice');
+      if (notice) notice.style.display = data.model_loaded ? 'none' : 'flex';
+    }
+  } catch { /* ignore */ }
+}
+
+function setOfflineNotices(offline) {
+  ['sentOffline','anomalyOffline','chatOffline'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) offline ? el.classList.add('visible') : el.classList.remove('visible');
+  });
+}
+
+/* ══════════════════════════════════════════════
+   SENTIMENT
+══════════════════════════════════════════════ */
+function setExample(type) {
+  document.getElementById('sentText').value = EXAMPLES[type];
+}
+
+async function analyzeSentiment() {
+  const text = document.getElementById('sentText').value.trim();
+  if (!text) return;
+
+  const btn = document.getElementById('sentBtn');
+  const icon = document.getElementById('sentBtnIcon');
+  btn.disabled = true;
+  icon.innerHTML = '<span class="spinner" style="border-top-color:#000"></span>';
+
+  try {
+    const res = await fetch(getApiBase() + '/api/sentiment/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!res.ok) throw new Error('API error ' + res.status);
+    const data = await res.json();
+    renderSentimentResult(data);
+  } catch (err) {
+    renderSentimentMock(text);
+  } finally {
+    btn.disabled = false;
+    icon.textContent = '✨';
+  }
+}
+
+function renderSentimentMock(text) {
+  // Simple heuristic for demo when API is offline
+  const lower = text.toLowerCase();
+  let label = 'neutral', conf = 0.61;
+  if (/struggl|exhaust|tired|can't|difficult|hard|fail|depress|unmotivat|behind|behind|overwhelm/.test(lower)) {
+    label = 'struggling'; conf = 0.78;
+  } else if (/crush|amazing|best|great|awesome|unstoppable|proud|won|success|perfect|incredible|kill|grind/.test(lower)) {
+    label = 'motivated'; conf = 0.82;
+  }
+  const scores = label === 'neutral'
+    ? { neutral: conf, motivated: (1-conf)*0.5, struggling: (1-conf)*0.5 }
+    : label === 'motivated'
+    ? { neutral: (1-conf)*0.4, motivated: conf, struggling: (1-conf)*0.6 }
+    : { neutral: (1-conf)*0.4, motivated: (1-conf)*0.6, struggling: conf };
+
+  renderSentimentResult({
+    label, confidence: conf,
+    scores,
+    flag: label === 'struggling' ? 'support_mode' : label === 'motivated' ? 'hype_mode' : null,
+    all_models: {
+      logistic_regression: { label, confidence: conf - 0.03 },
+      linear_svc:          { label, confidence: conf - 0.01 },
+      xgboost:             { label, confidence: conf + 0.01 },
+      lightgbm:            { label, confidence: conf + 0.02 },
+      voting_ensemble:     { label, confidence: conf + 0.03 },
+      stacking_ensemble:   { label, confidence: conf + 0.04 },
+    },
+  });
+}
+
+function renderSentimentResult(data) {
+  const result = document.getElementById('sentResult');
+  result.classList.add('visible');
+
+  const label = (data.label || 'neutral').toLowerCase();
+  const conf  = data.confidence || 0;
+
+  const labelEl = document.getElementById('sentLabel');
+  labelEl.textContent = label.toUpperCase();
+  labelEl.className = 'result-label ' + label;
+
+  document.getElementById('sentConfPct').textContent = (conf * 100).toFixed(1) + '%';
+  const fill = document.getElementById('sentConfFill');
+  fill.style.width = '0%';
+  fill.className = 'progress-fill ' + (label === 'motivated' ? 'pf-green' : label === 'struggling' ? 'pf-red' : 'pf-gray');
+  setTimeout(() => fill.style.width = (conf * 100) + '%', 50);
+
+  // Flag badge
+  const flagEl = document.getElementById('sentFlagBadge');
+  if (data.flag === 'support_mode') {
+    flagEl.innerHTML = '<span class="badge badge-struggling">🔴 Support Mode</span>';
+  } else if (data.flag === 'hype_mode') {
+    flagEl.innerHTML = '<span class="badge badge-motivated">🟢 Hype Mode</span>';
+  } else {
+    flagEl.innerHTML = '<span class="badge badge-neutral">— Standard</span>';
+  }
+
+  // Probabilities
+  const scores = data.scores || {};
+  const probDefs = [
+    { key:'neutral',    color:'pf-gray',  label:'Neutral' },
+    { key:'motivated',  color:'pf-green', label:'Motivated' },
+    { key:'struggling', color:'pf-red',   label:'Struggling' },
+  ];
+  const probEl = document.getElementById('sentProbs');
+  probEl.innerHTML = '';
+  probDefs.forEach(p => {
+    const pct = ((scores[p.key] || 0) * 100).toFixed(1);
+    probEl.innerHTML += `
+      <div class="progress-wrap">
+        <div class="progress-label"><span>${p.label}</span><span>${pct}%</span></div>
+        <div class="progress-track"><div class="progress-fill ${p.color}" id="prob_${p.key}" style="width:0%"></div></div>
+      </div>`;
+  });
+  setTimeout(() => {
+    probDefs.forEach(p => {
+      const el = document.getElementById('prob_' + p.key);
+      if (el) el.style.width = ((scores[p.key] || 0) * 100) + '%';
+    });
+  }, 80);
+
+  // All models table
+  const tbody = document.getElementById('sentModelsTbody');
+  tbody.innerHTML = '';
+  const models = data.all_models || {};
+  const modelKeys = ['logistic_regression','linear_svc','xgboost','lightgbm','voting_ensemble','stacking_ensemble'];
+  modelKeys.forEach(key => {
+    const m = models[key] || {};
+    const ml = (m.label || '?').toLowerCase();
+    const mc = (m.confidence || 0) * 100;
+    const color = ml === 'motivated' ? '#10b981' : ml === 'struggling' ? '#ef4444' : '#9ca3af';
+    const isBest = key === 'stacking_ensemble';
+    tbody.innerHTML += `
+      <tr>
+        <td class="model-name ${isBest?'best':''}">${MODEL_LABELS[key] || key}</td>
+        <td><span style="color:${color};font-weight:600;font-size:12px">${ml.toUpperCase()}</span></td>
+        <td>
+          <div class="mini-bar-wrap">
+            <div class="mini-track"><div class="mini-fill" id="mf_s_${key}" style="width:0%;background:${color}"></div></div>
+            <span class="mini-pct">${mc.toFixed(1)}%</span>
+          </div>
+        </td>
+      </tr>`;
+  });
+  setTimeout(() => {
+    modelKeys.forEach(key => {
+      const m = models[key] || {};
+      const el = document.getElementById('mf_s_' + key);
+      if (el) el.style.width = ((m.confidence || 0) * 100) + '%';
+    });
+  }, 100);
+}
+
+/* ══════════════════════════════════════════════
+   ANOMALY DETECTION
+══════════════════════════════════════════════ */
+const SLIDER_KEYS = ['apd','xp','gap','isr','avg','max','sacr','xpm'];
+
+function syncSlider(key) {
+  const val = document.getElementById('sl_' + key).value;
+  document.getElementById('in_' + key).value = val;
+  document.getElementById('sv_' + key).textContent = parseFloat(val).toFixed(['isr','sacr'].includes(key) ? 2 : key==='xpm' ? 1 : 0);
+}
+
+function syncInput(key) {
+  const val = document.getElementById('in_' + key).value;
+  document.getElementById('sl_' + key).value = val;
+  document.getElementById('sv_' + key).textContent = parseFloat(val).toFixed(['isr','sacr'].includes(key) ? 2 : key==='xpm' ? 1 : 0);
+}
+
+function loadPreset(name) {
+  const p = PRESETS[name];
+  if (!p) return;
+  Object.entries(p).forEach(([key, val]) => {
+    const mapKey = key === 'apd' ? 'apd' : key;
+    document.getElementById('in_' + mapKey).value = val;
+    document.getElementById('sl_' + mapKey).value = val;
+    document.getElementById('sv_' + mapKey).textContent = parseFloat(val).toFixed(['isr','sacr'].includes(mapKey) ? 2 : mapKey==='xpm' ? 1 : 0);
+  });
+}
+
+function getAnomalyInputs() {
+  return {
+    activities_per_day:    +document.getElementById('in_apd').value,
+    daily_xp_total:        +document.getElementById('in_xp').value,
+    streak_gap_days:       +document.getElementById('in_gap').value,
+    intensity_switch_rate: +document.getElementById('in_isr').value,
+    avg_session_duration:  +document.getElementById('in_avg').value,
+    max_session_duration:  +document.getElementById('in_max').value,
+    sessions_at_cap_ratio: +document.getElementById('in_sacr').value,
+    xp_per_minute:         +document.getElementById('in_xpm').value,
+  };
+}
+
+async function checkAnomaly() {
+  const btn  = document.getElementById('anomalyBtn');
+  const icon = document.getElementById('anomalyBtnIcon');
+  btn.disabled = true;
+  icon.innerHTML = '<span class="spinner" style="border-top-color:#000"></span>';
+
+  const payload = getAnomalyInputs();
+
+  try {
+    const res = await fetch(getApiBase() + '/api/activity/check', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!res.ok) throw new Error('API error');
+    const data = await res.json();
+    // API returns scores: {lr: float, ...} — map to all_models: {lr: {is_anomaly, confidence}}
+    if (data.scores && !data.all_models) {
+      data.all_models = {};
+      Object.entries(data.scores).forEach(([key, prob]) => {
+        data.all_models[key] = { is_anomaly: prob > 0.5, confidence: prob };
+      });
+    }
+    renderAnomalyResult(data);
+  } catch {
+    renderAnomalyMock(payload);
+  } finally {
+    btn.disabled = false;
+    icon.textContent = '🔍';
+  }
+}
+
+function renderAnomalyMock(p) {
+  let is_anomaly = false, anomaly_type = null, conf = 0.12;
+  if (p.activities_per_day >= 10 || p.daily_xp_total >= 800 || p.xp_per_minute >= 2.5) {
+    is_anomaly = true; anomaly_type = 'xp_grinding'; conf = 0.93;
+  } else if (p.intensity_switch_rate >= 0.85) {
+    is_anomaly = true; anomaly_type = 'intensity_spoofing'; conf = 0.88;
+  } else if (p.streak_gap_days >= 4) {
+    is_anomaly = true; anomaly_type = 'impossible_streak'; conf = 0.91;
+  }
+
+  const models = {};
+  ['logistic_regression','decision_tree','random_forest'].forEach(m => {
+    models[m] = { is_anomaly, confidence: is_anomaly ? conf - Math.random()*0.08 : conf + Math.random()*0.05 };
+  });
+
+  renderAnomalyResult({ is_anomaly, confidence: conf, anomaly_type, latency_ms: 12, all_models: models });
+}
+
+function renderAnomalyResult(data) {
+  const result = document.getElementById('anomalyResult');
+  result.classList.add('visible');
+
+  const isAnom = data.is_anomaly;
+  const conf   = data.confidence || 0;
+
+  const labelEl = document.getElementById('anomalyLabel');
+  labelEl.textContent = isAnom ? '⚠ ANOMALY DETECTED' : '✓ NORMAL';
+  labelEl.className = 'result-label ' + (isAnom ? 'anomaly' : 'normal');
+
+  // Type chip
+  const typeEl = document.getElementById('anomalyTypeChip');
+  if (isAnom && data.anomaly_type) {
+    const typeMap = {
+      xp_grinding:       { label:'XP Grinding', color:'badge-struggling' },
+      intensity_spoofing: { label:'Intensity Spoofing', color:'badge-purple' },
+      impossible_streak: { label:'Impossible Streak', color:'badge-gold' },
+    };
+    const t = typeMap[data.anomaly_type] || { label: data.anomaly_type, color: 'badge-neutral' };
+    typeEl.innerHTML = `<span class="badge ${t.color}">${t.label}</span>`;
+  } else {
+    typeEl.innerHTML = isAnom ? '' : '<span class="badge badge-normal">Clean Activity</span>';
+  }
+
+  // Conf badge
+  const confBadge = document.getElementById('anomalyConfBadge');
+  confBadge.innerHTML = `<span class="badge ${isAnom?'badge-anomaly':'badge-normal'}">${(conf*100).toFixed(1)}% conf</span>`;
+
+  // Conf bar
+  const fill = document.getElementById('anomalyConfFill');
+  fill.className = 'progress-fill ' + (isAnom ? 'pf-red' : 'pf-green');
+  fill.style.width = '0%';
+  document.getElementById('anomalyConfPct').textContent = (conf*100).toFixed(1) + '%';
+  setTimeout(() => fill.style.width = (conf*100) + '%', 50);
+
+  // Models
+  const tbody = document.getElementById('anomalyModelsTbody');
+  tbody.innerHTML = '';
+  const models = data.all_models || {};
+  Object.entries(models).forEach(([key, m]) => {
+    const anom = m.is_anomaly;
+    const mc   = (m.confidence || 0) * 100;
+    const color = anom ? '#ef4444' : '#10b981';
+    const nice = key.replace(/_/g,' ').replace(/\b\w/g, c => c.toUpperCase());
+    tbody.innerHTML += `
+      <tr>
+        <td class="model-name">${nice}</td>
+        <td><span style="color:${color};font-weight:600;font-size:12px">${anom ? 'ANOMALY' : 'NORMAL'}</span></td>
+        <td>
+          <div class="mini-bar-wrap">
+            <div class="mini-track"><div class="mini-fill" id="mf_a_${key}" style="width:0%;background:${color}"></div></div>
+            <span class="mini-pct">${mc.toFixed(1)}%</span>
+          </div>
+        </td>
+      </tr>`;
+  });
+  setTimeout(() => {
+    Object.entries(models).forEach(([key, m]) => {
+      const el = document.getElementById('mf_a_' + key);
+      if (el) el.style.width = ((m.confidence || 0) * 100) + '%';
+    });
+  }, 100);
+}
+
+/* ══════════════════════════════════════════════
+   XP CALCULATOR
+══════════════════════════════════════════════ */
+function buildXpGrid() {
+  const grid = document.getElementById('xpBuildGrid');
+  grid.innerHTML = '';
+  BUILDS.forEach(b => {
+    const div = document.createElement('div');
+    div.className = 'build-card' + (b.id === xpBuild ? ' selected' : '');
+    div.innerHTML = `<span class="build-emoji">${b.emoji}</span><span class="build-name">${b.name}</span>`;
+    div.onclick = () => {
+      document.querySelectorAll('#xpBuildGrid .build-card').forEach(c => c.classList.remove('selected'));
+      div.classList.add('selected');
+      xpBuild = b.id;
+      updateRelevance();
+    };
+    grid.appendChild(div);
+  });
+}
+
+function buildXpActivitySelect() {
+  const sel = document.getElementById('xpActivity');
+  sel.innerHTML = '';
+  const groups = {};
+  ACTIVITIES.forEach(a => {
+    if (!groups[a.group]) groups[a.group] = [];
+    groups[a.group].push(a);
+  });
+  Object.entries(groups).forEach(([grp, acts]) => {
+    const og = document.createElement('optgroup');
+    og.label = grp;
+    acts.forEach(a => {
+      const opt = document.createElement('option');
+      opt.value = a.id;
+      opt.textContent = a.label;
+      og.appendChild(opt);
+    });
+    sel.appendChild(og);
+  });
+  updateRelevance();
+}
+
+function updateRelevance() {
+  const actId = document.getElementById('xpActivity').value;
+  const isPrimary = (PRIMARY_ACTIVITIES[xpBuild] || []).includes(actId);
+  const badge = document.getElementById('xpRelevanceBadge');
+  badge.innerHTML = isPrimary
+    ? '<span class="badge badge-gold">⭐ Primary Activity — 1.0× relevance</span>'
+    : '<span class="badge badge-neutral">◦ Non-Primary — 0.5× relevance</span>';
+}
+
+function selectIntensity(level, btn) {
+  document.querySelectorAll('.intensity-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  xpIntensity = level;
+}
+
+function getStreakMult(days) {
+  if (days < 5)  return 1.0;
+  if (days < 10) return 1.5;
+  if (days < 20) return 1.75;
+  if (days < 30) return 2.0;
+  if (days < 60) return 2.25;
+  return 2.5;
+}
+
+function calcXP() {
+  const actId    = document.getElementById('xpActivity').value;
+  const duration = +document.getElementById('xpDuration').value;
+  const streak   = +document.getElementById('xpStreakNum').value;
+
+  const base_xp       = duration;
+  const intMult       = xpIntensity === 'light' ? 1.0 : xpIntensity === 'moderate' ? 1.5 : 2.0;
+  const isPrimary     = (PRIMARY_ACTIVITIES[xpBuild] || []).includes(actId);
+  const relevanceMult = isPrimary ? 1.0 : 0.5;
+  const streakMult    = getStreakMult(streak);
+  const raw           = base_xp * intMult * relevanceMult * streakMult;
+  const daily_cap     = 600;
+  const final         = Math.min(raw, daily_cap);
+  const capped        = raw > daily_cap;
+
+  const result = document.getElementById('xpResult');
+  result.classList.add('visible');
+  document.getElementById('xpResultNum').textContent = Math.round(final);
+  document.getElementById('xpCapNote').textContent = capped
+    ? `⚠ Capped at daily limit of ${daily_cap} XP (raw was ${Math.round(raw)} XP)`
+    : '';
+
+  const actLabel = ACTIVITIES.find(a => a.id === actId)?.label || actId;
+  const buildInfo = BUILDS.find(b => b.id === xpBuild);
+  const tbody = document.querySelector('#xpFormulaTable tbody');
+  tbody.innerHTML = `
+    <tr><td>Build</td><td>${buildInfo?.emoji} ${buildInfo?.name}</td></tr>
+    <tr><td>Activity</td><td>${actLabel} ${isPrimary ? '⭐' : ''}</td></tr>
+    <tr><td>Base XP (duration)</td><td>${base_xp} min = ${base_xp} XP</td></tr>
+    <tr><td>× Intensity (${xpIntensity})</td><td>${intMult}×</td></tr>
+    <tr><td>× Relevance</td><td>${relevanceMult}× ${isPrimary ? '(primary)' : '(non-primary)'}</td></tr>
+    <tr><td>× Streak bonus (${streak} days)</td><td>${streakMult}×</td></tr>
+    <tr><td>= Raw XP</td><td>${Math.round(raw)} XP</td></tr>
+    <tr><td>Daily Cap</td><td>${daily_cap} XP (Level 1–10)</td></tr>
+    <tr><td>✦ Final XP</td><td>${Math.round(final)} XP</td></tr>
+  `;
+}
+
+/* ══════════════════════════════════════════════
+   CHAT
+══════════════════════════════════════════════ */
+function buildChatBuilds() {
+  const row = document.getElementById('chatBuildRow');
+  row.innerHTML = '';
+  BUILDS.forEach(b => {
+    const btn = document.createElement('button');
+    btn.className = 'chat-build-btn' + (b.id === selectedBuild ? ' selected' : '');
+    btn.textContent = b.emoji + ' ' + b.name;
+    btn.onclick = () => {
+      document.querySelectorAll('.chat-build-btn').forEach(x => x.classList.remove('selected'));
+      btn.classList.add('selected');
+      selectedBuild = b.id;
+    };
+    row.appendChild(btn);
+  });
+}
+
+function clearChat() {
+  chatHistory = [];
+  const msgs = document.getElementById('chatMessages');
+  msgs.innerHTML = `
+    <div class="empty-state">
+      <div class="empty-icon">⚔️</div>
+      <div>Select a build and start chatting with your AI companion!</div>
+    </div>`;
+  document.getElementById('chatSentHint').textContent = '';
+}
+
+async function sendChat() {
+  const input = document.getElementById('chatInput');
+  const msg = input.value.trim();
+  if (!msg) return;
+
+  input.value = '';
+  document.getElementById('chatSentHint').textContent = '';
+
+  const msgs = document.getElementById('chatMessages');
+  // Remove empty state
+  const empty = msgs.querySelector('.empty-state');
+  if (empty) empty.remove();
+
+  // User bubble
+  msgs.innerHTML += `
+    <div class="chat-msg msg-user">
+      <div class="bubble">${escHtml(msg)}</div>
+    </div>`;
+  msgs.scrollTop = msgs.scrollHeight;
+
+  // Loading
+  const loadId = 'load_' + Date.now();
+  msgs.innerHTML += `
+    <div class="chat-msg msg-ai" id="${loadId}">
+      <div class="ai-avatar">⚔️</div>
+      <div class="bubble"><div class="spinner-lg"></div></div>
+    </div>`;
+  msgs.scrollTop = msgs.scrollHeight;
+
+  const t0 = performance.now();
+
+  try {
+    const res = await fetch(getApiBase() + '/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ build: selectedBuild, message: msg, history: chatHistory }),
+      signal: AbortSignal.timeout(20000),
+    });
+    if (!res.ok) {
+      const errStatus = res.status;
+      throw Object.assign(new Error('API error'), { status: errStatus });
+    }
+    const data = await res.json();
+    const latency = data.latency_ms || Math.round(performance.now() - t0);
+    chatHistory.push({ role: 'user', content: msg });
+    chatHistory.push({ role: 'assistant', content: data.reply });
+    if (chatHistory.length > 20) chatHistory = chatHistory.slice(-20);
+    replaceLoading(loadId, data.reply, selectedBuild, latency, null);
+  } catch(err) {
+    replaceLoading(loadId, null, selectedBuild, null, err.status || null);
+  }
+}
+
+function replaceLoading(id, reply, build, latency, errStatus) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const buildInfo = BUILDS.find(b => b.id === build);
+  const avatar = buildInfo ? buildInfo.emoji : '⚔️';
+
+  if (!reply) {
+    const errMsg = errStatus === 503
+      ? '🧠 LLM model not loaded — the fine-tuned LLaMA 3 needs GPU. Restart the server with <code>LEVELUP_LOAD_MODEL=true</code>.'
+      : 'The AI companion is offline. Connect the API backend to chat!';
+    el.innerHTML = `
+      <div class="ai-avatar">${avatar}</div>
+      <div>
+        <div class="bubble" style="color:var(--gray);font-style:italic">
+          ${errMsg}
+        </div>
+      </div>`;
+  } else {
+    el.innerHTML = `
+      <div class="ai-avatar">${avatar}</div>
+      <div>
+        <div class="bubble">${escHtml(reply)}</div>
+        <div class="msg-meta">
+          <span class="badge badge-gold" style="font-size:9px;padding:2px 7px">${buildInfo?.name || build}</span>
+          ${latency ? `<span>${latency}ms</span>` : ''}
+        </div>
+      </div>`;
+  }
+  const msgs = document.getElementById('chatMessages');
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+/* ── Debounced sentiment hint ── */
+function debounceSentiment(text) {
+  clearTimeout(sentDebounceTimer);
+  const hint = document.getElementById('chatSentHint');
+  if (!text.trim()) { hint.textContent = ''; hint.className = 'sentiment-hint'; return; }
+  sentDebounceTimer = setTimeout(() => fetchSentimentHint(text), 600);
+}
+
+async function fetchSentimentHint(text) {
+  const hint = document.getElementById('chatSentHint');
+  try {
+    const res = await fetch(getApiBase() + '/api/sentiment/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+      signal: AbortSignal.timeout(3000),
+    });
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    const label = (data.label || 'neutral').toLowerCase();
+    const conf  = ((data.confidence || 0) * 100).toFixed(0);
+    hint.className = 'sentiment-hint ' + label;
+    hint.textContent = `Sentiment detected: ${label.toUpperCase()} (${conf}% confidence)`;
+  } catch {
+    // Offline — silent
+    hint.className = 'sentiment-hint';
+    hint.textContent = '';
+  }
+}
+
+/* ══════════════════════════════════════════════
+   UTILS
+══════════════════════════════════════════════ */
+function escHtml(str) {
+  return str
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/\n/g,'<br>');
+}
+</script>
+</body>
+</html>
