@@ -983,7 +983,7 @@ const BUILDS = {
   }
 };
 
-// Auto-detect API base: ?api=URL param → backend Space URL → localhost fallback
+// Auto-detect API: ?api=URL param → HF backend → localhost fallback
 const _params  = new URLSearchParams(window.location.search);
 const API_BASE = _params.get('api')
   || (window.location.hostname.endsWith('.hf.space')
