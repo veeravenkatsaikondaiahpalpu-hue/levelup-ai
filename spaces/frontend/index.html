@@ -983,11 +983,11 @@ const BUILDS = {
   }
 };
 
-// Auto-detect API base: ?api=URL param → HF Space URL → localhost fallback
+// Auto-detect API base: ?api=URL param → backend Space URL → localhost fallback
 const _params  = new URLSearchParams(window.location.search);
 const API_BASE = _params.get('api')
   || (window.location.hostname.endsWith('.hf.space')
-      ? window.location.origin.replace('-levelup-ai.', '-levelup-ai-api.')
+      ? 'https://venkatkondaiahpalpu-levelup-ai-api.hf.space'
       : 'http://localhost:8000');
 
 // ── STATE ────────────────────────────────────────────────────────
