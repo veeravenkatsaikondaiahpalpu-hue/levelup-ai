@@ -15,12 +15,10 @@ None of these mechanics apply to other builds.
 """
 
 from dataclasses import dataclass
-from typing import Optional
 
 from .builds import BuildType, Intensity, is_primary_activity
 
-
-# ── Constants ─────────────────────────────────────────────────────────────────
+# Constants
 
 GAMER_COMBO_BONUSES: dict[int, float] = {
     2: 0.20,   # 2nd primary session today → +0.2x
@@ -35,7 +33,7 @@ GAMER_SPEEDRUN_THRESHOLD_MINS: int = 25  # Minutes at-or-below to qualify
 GAMER_SIDE_QUEST_MULTIPLIER: float = 0.40  # Non-Gamer relevance (vs 0.5x default)
 
 
-# ── Result Dataclass ──────────────────────────────────────────────────────────
+# Result Dataclass
 
 @dataclass
 class GamerXPResult:
@@ -51,7 +49,7 @@ class GamerXPResult:
     intensity:         Intensity
     base_final_xp:     int        # XP from the standard formula (post-cap)
 
-    # ── Gamer modifiers ───────────────────────────────────────────────────────
+    # Gamer modifiers
     combo_multiplier:  float      # Extra multiplier from consecutive sessions (0 if N/A)
     combo_bonus_xp:    int        # Flat XP added by combo (int(base_final_xp * combo_mult))
     is_boss_day:       bool       # True if today is a Boss Day (streak % 7 == 0)
@@ -60,11 +58,11 @@ class GamerXPResult:
     overtime_xp:       int        # XP drawn from Overtime pool (0 if cap not hit)
     side_quest_penalty:bool       # True if 0.4x penalty was applied
 
-    # ── Final totals ──────────────────────────────────────────────────────────
+    # Final totals
     gamer_bonus_total: int        # Sum of all gamer bonuses (combo + speedrun + overtime)
     final_xp:          int        # Total XP credited this session
 
-    # ── Remaining pools ───────────────────────────────────────────────────────
+    # Remaining pools
     overtime_pool_remaining: int  # Overtime XP left for today
 
     def summary(self) -> str:
@@ -92,12 +90,12 @@ class GamerXPResult:
             )
         if self.side_quest_penalty:
             lines.append("  📉 Side Quest    : 0.4x (non-Gamer activity)")
-        lines.append(f"  ─────────────────────────────────────")
+        lines.append("  ─────────────────────────────────────")
         lines.append(f"  TOTAL EARNED    : {self.final_xp} XP")
         return "\n".join(lines)
 
 
-# ── Core Functions ────────────────────────────────────────────────────────────
+# Core Functions
 
 def get_combo_multiplier(primary_sessions_today: int) -> float:
     """
@@ -188,14 +186,13 @@ def calculate_gamer_xp(
     Returns:
         GamerXPResult with full breakdown
     """
+    from .builds import INTENSITY_MULTIPLIERS as _IM
     from .xp_calculator import (
         get_daily_cap,
         get_streak_multiplier,
-        INTENSITY_MULTIPLIERS,
     )
-    from .builds import INTENSITY_MULTIPLIERS as _IM
 
-    # ── Base XP formula (same as standard) ───────────────────────────────────
+    # Base XP formula (same as standard)
     base_xp         = float(duration_minutes)
     intensity_mult  = _IM[intensity]
     relevance_mult  = get_gamer_relevance_multiplier(activity_type)
@@ -205,7 +202,7 @@ def calculate_gamer_xp(
     is_primary      = is_primary_activity(activity_type, BuildType.GAMER)
     side_quest      = not is_primary  # penalty was applied
 
-    # ── Mechanic 3: Boss Day cap ──────────────────────────────────────────────
+    # Mechanic 3: Boss Day cap
     base_cap        = get_daily_cap(current_level)
     effective_cap   = get_gamer_daily_cap(base_cap, current_streak)
     boss_day        = is_boss_day(current_streak)
@@ -215,16 +212,16 @@ def calculate_gamer_xp(
     earned_std      = min(int(round(raw_xp)), remaining_std)
     cap_hit         = daily_xp_so_far + earned_std >= effective_cap
 
-    # ── Mechanic 1: Combo Multiplier (primary sessions only) ──────────────────
+    # Mechanic 1: Combo Multiplier (primary sessions only)
     combo_mult      = get_combo_multiplier(primary_sessions_today) if is_primary else 0.0
     combo_bonus_xp  = int(earned_std * combo_mult)
 
-    # ── Mechanic 4: Speedrun Bonus (primary sessions only) ────────────────────
+    # Mechanic 4: Speedrun Bonus (primary sessions only)
     speedrun_bonus  = 0
     if is_primary and qualifies_for_speedrun_bonus(activity_type, duration_minutes, intensity):
         speedrun_bonus = GAMER_SPEEDRUN_BONUS_XP
 
-    # ── Mechanic 2: Overtime Mode (primary sessions only, after cap) ──────────
+    # Mechanic 2: Overtime Mode (primary sessions only, after cap)
     overtime_xp     = 0
     if is_primary and (cap_hit or daily_xp_so_far >= effective_cap):
         overtime_pool_left = max(0, GAMER_OVERTIME_LIMIT - overtime_xp_today)
@@ -232,7 +229,7 @@ def calculate_gamer_xp(
         overtime_raw   = max(0, int(round(raw_xp)) - remaining_std)
         overtime_xp    = min(overtime_raw, overtime_pool_left)
 
-    # ── Total ─────────────────────────────────────────────────────────────────
+    # Total
     gamer_bonus_total   = combo_bonus_xp + speedrun_bonus + overtime_xp
     final_xp            = earned_std + gamer_bonus_total
     overtime_remaining  = max(0, GAMER_OVERTIME_LIMIT - overtime_xp_today - overtime_xp)

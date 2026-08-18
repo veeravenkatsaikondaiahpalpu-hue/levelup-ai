@@ -1,24 +1,24 @@
 """
-system_prompt.py - Builds the LLM system prompt from UserState context.
+Builds the full LLM system prompt from a UserState context dict.
 
-The system prompt is injected on EVERY request. It gives the AI:
-  1. Its identity and personality (tied to the user's build)
-  2. Full awareness of the user's current stats (level, XP, streak, badge)
-  3. The last 5 activity logs for conversational continuity
-  4. Strict behavioural rules (what NOT to do)
+This runs on every chat request when the app provides live user stats.
+The resulting prompt gives the AI four things it needs to be a good coach:
+  1. Its persona and tone (tied to the user's chosen build)
+  2. The user's current stats — level, XP, streak, badge, daily cap
+  3. The last 5 activity logs so it can reference real recent sessions
+  4. Hard rules it must never break (no medical advice, no invented XP numbers, etc.)
 
-The chatbot has 4 modes, detected from the user's message:
-  - XP_COACH       : questions about XP, activities, calculations
-  - BUILD_ADVISOR  : questions about build choice, switching, new builds
-  - MOTIVATION     : struggling / low energy detected by sentiment layer
-  - GENERAL        : anything else (casual chat, questions about the app)
+The chatbot operates in one of four modes, detected from the user's message:
+  XP_COACH      — questions about XP formula, daily cap, streak multipliers
+  BUILD_ADVISOR — questions about picking or switching builds
+  MOTIVATION    — user seems to be struggling (caught by sentiment or keywords)
+  GENERAL       — everything else (casual chat, how the app works, etc.)
 """
 
-from typing import Optional
+
 from xp_engine import BuildType
 
-
-# ── Per-Build Personality Profiles ────────────────────────────────────────────
+# Per-Build Personality Profiles
 
 BUILD_PERSONALITY: dict[BuildType, dict] = {
     BuildType.STRENGTH: {
@@ -126,7 +126,7 @@ BUILD_PERSONALITY: dict[BuildType, dict] = {
 }
 
 
-# ── Formatting Helpers ────────────────────────────────────────────────────────
+# Formatting Helpers
 
 def _format_logs(recent_logs: list) -> str:
     if not recent_logs:
@@ -155,23 +155,20 @@ def _format_gamer_extras(ctx: dict) -> str:
     return "\n".join(lines)
 
 
-# ── Main Builder ──────────────────────────────────────────────────────────────
+# Main Builder
 
 def build_system_prompt(
-    ctx: dict,
-    sentiment: Optional[str] = None,   # "motivated" | "neutral" | "struggling"
-    mode: Optional[str] = None,        # "xp_coach" | "build_advisor" | "motivation" | "general"
+    ctx:       dict,
+    sentiment: str | None = None,  # "motivated" | "neutral" | "struggling"
+    mode:      str | None = None,  # "xp_coach" | "build_advisor" | "motivation" | "general"
 ) -> str:
     """
-    Build the full system prompt for the LLM from a UserState context dict.
+    Assemble the full system prompt from a UserState context dict.
 
-    Args:
-        ctx       : output of UserState.to_context_dict()
-        sentiment : result of BERT sentiment classifier on the latest user message
-        mode      : detected intent mode (optional — AI infers if not provided)
-
-    Returns:
-        A formatted system prompt string ready to pass to the LLM.
+    ctx is the output of UserState.to_context_dict() — it has all the numbers
+    the AI needs (XP, streak, badge, recent logs, etc.).
+    sentiment comes from our trained classifier; mode from keyword detection.
+    Both are optional — the AI handles None gracefully.
     """
     build_key  = ctx.get("primary_build", "strength")
     try:
@@ -181,7 +178,7 @@ def build_system_prompt(
 
     persona = BUILD_PERSONALITY[build_type]
 
-    # ── Section 1: Identity ───────────────────────────────────────────────────
+    # Section 1: Identity
     identity = f"""You are {persona['name']}, the AI companion for LevelUp — a real-life RPG where every grind earns XP.
 You are assigned to a user on the {build_key.upper()} build.
 Your tone: {persona['tone']}
@@ -189,7 +186,7 @@ Your style: {persona['style']}
 Your catchphrase (use sparingly, not every message): "{persona['catchphrase']}"
 """
 
-    # ── Section 2: User Stats ─────────────────────────────────────────────────
+    # Section 2: User Stats
     xp_remaining = ctx.get('daily_xp_remaining', 0)
     cap_status   = "DAILY CAP REACHED" if ctx.get('daily_cap_reached') else f"{xp_remaining} XP remaining today"
 
@@ -210,12 +207,12 @@ Your catchphrase (use sparingly, not every message): "{persona['catchphrase']}"
   Can unlock new build: {'YES — Legendary reached!' if ctx.get('can_unlock_build') else 'No'}
 {_format_gamer_extras(ctx)}"""
 
-    # ── Section 3: Recent Activity ────────────────────────────────────────────
+    # Section 3: Recent Activity
     activity_log = f"""
 [RECENT ACTIVITY — last 5 sessions]
 {_format_logs(ctx.get('recent_logs', []))}"""
 
-    # ── Section 4: Sentiment-Aware Layer ─────────────────────────────────────
+    # Section 4: Sentiment-Aware Layer
     sentiment_note = ""
     if sentiment == "struggling":
         sentiment_note = f"""
@@ -231,7 +228,7 @@ Do NOT lecture. Do NOT push hard. Acknowledge the difficulty first, then motivat
 The user is in a high-energy state. Match their energy. Be hype. Push them further.
 """
 
-    # ── Section 5: Mode Instructions ─────────────────────────────────────────
+    # Section 5: Mode Instructions
     mode_instructions = {
         "xp_coach": """
 [MODE: XP COACH]
@@ -265,7 +262,7 @@ Reference their stats naturally if relevant, but don't force it.
     }
     mode_block = mode_instructions.get(mode or "general", mode_instructions["general"])
 
-    # ── Section 6: Hard Rules ─────────────────────────────────────────────────
+    # Section 6: Hard Rules
     rules = """
 [RULES — never break these]
 - Never claim to be ChatGPT, GPT, or any other AI. You are the LevelUp companion.
@@ -277,11 +274,11 @@ Reference their stats naturally if relevant, but don't force it.
 - Always stay in character for the build's persona.
 """
 
-    # ── Assemble ──────────────────────────────────────────────────────────────
+    # Assemble
     return "\n".join([identity, stats, activity_log, sentiment_note, mode_block, rules])
 
 
-# ── Mode Detection ────────────────────────────────────────────────────────────
+# Mode Detection
 
 XP_KEYWORDS        = {"xp", "exp", "points", "earn", "cap", "streak", "multiplier",
                        "how much", "calculate", "formula", "daily", "limit", "activities"}
@@ -292,11 +289,10 @@ MOTIVATION_KEYWORDS= {"tired", "can't", "cant", "unmotivated", "lazy", "skip",
                        "failed", "missed", "feel like"}
 
 
-def detect_mode(user_message: str, sentiment: Optional[str] = None) -> str:
+def detect_mode(user_message: str, sentiment: str | None = None) -> str:
     """
-    Lightweight keyword-based mode detection.
-    Supplements (or replaces) the BERT sentiment classifier when not available.
-
+    Simple keyword scan to figure out what the user needs from this message.
+    Works even when the sentiment model isn't available — just uses word matching.
     Returns one of: "xp_coach" | "build_advisor" | "motivation" | "general"
     """
     msg = user_message.lower()
@@ -310,7 +306,7 @@ def detect_mode(user_message: str, sentiment: Optional[str] = None) -> str:
     return "general"
 
 
-# ── Quick Test (run directly) ─────────────────────────────────────────────────
+# Quick Test (run directly)
 
 if __name__ == "__main__":
     # Simulate a UserState context dict

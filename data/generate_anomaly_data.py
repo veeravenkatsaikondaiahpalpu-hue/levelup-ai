@@ -28,11 +28,10 @@ Label:
   anomaly_type — "none" | "xp_grinding" | "impossible_streak" | "intensity_spoofing"
 """
 
-import random
 import csv
 import os
-from dataclasses import dataclass, field, asdict
-from typing import Literal
+import random
+from dataclasses import asdict, dataclass
 
 SEED = 42
 random.seed(SEED)
@@ -52,7 +51,7 @@ INTENSITY_MULT = {"light": 1.0, "moderate": 1.5, "intense": 2.0}
 DAILY_CAP = 600
 
 
-# ── Record Structure ──────────────────────────────────────────────────────────
+# Record Structure
 
 @dataclass
 class LogRecord:
@@ -68,13 +67,13 @@ class LogRecord:
     anomaly_type:          str   # "none" | "xp_grinding" | "impossible_streak" | "intensity_spoofing"
 
 
-# ── XP Calculator (simplified, no streak mult for generation) ─────────────────
+# XP Calculator (simplified, no streak mult for generation)
 
 def calc_xp(duration: int, intensity: str) -> float:
     return duration * INTENSITY_MULT[intensity]
 
 
-# ── Normal Log Generator ──────────────────────────────────────────────────────
+# Normal Log Generator
 
 def gen_normal() -> LogRecord:
     """Realistic user: 1-4 sessions/day, normal durations, consistent streak."""
@@ -110,7 +109,7 @@ def gen_normal() -> LogRecord:
     )
 
 
-# ── Anomaly Type A: XP Grinding ───────────────────────────────────────────────
+# Anomaly Type A: XP Grinding
 
 def gen_anomaly_xp_grinding() -> LogRecord:
     """
@@ -151,7 +150,7 @@ def gen_anomaly_xp_grinding() -> LogRecord:
     )
 
 
-# ── Anomaly Type B: Impossible Streak ────────────────────────────────────────
+# Anomaly Type B: Impossible Streak
 
 def gen_anomaly_impossible_streak() -> LogRecord:
     """
@@ -179,7 +178,7 @@ def gen_anomaly_impossible_streak() -> LogRecord:
     )
 
 
-# ── Anomaly Type C: Intensity Spoofing ───────────────────────────────────────
+# Anomaly Type C: Intensity Spoofing
 
 def gen_anomaly_intensity_spoofing() -> LogRecord:
     """
@@ -212,7 +211,7 @@ def gen_anomaly_intensity_spoofing() -> LogRecord:
     )
 
 
-# ── Dataset Builder ───────────────────────────────────────────────────────────
+# Dataset Builder
 
 ANOMALY_GENERATORS = [
     gen_anomaly_xp_grinding,
@@ -277,7 +276,7 @@ def generate_dataset(
     return full_path, train_path, test_path
 
 
-# ── Stats Printer ─────────────────────────────────────────────────────────────
+# Stats Printer
 
 def print_stats(csv_path: str):
     with open(csv_path, newline="") as f:
@@ -299,12 +298,12 @@ def print_stats(csv_path: str):
         print(f"    {k:<30} {v:,}")
 
 
-# ── Entry Point ───────────────────────────────────────────────────────────────
+# Entry Point
 
 if __name__ == "__main__":
     print("Generating anomaly detection dataset...")
     full, train, test = generate_dataset(n_total=10_000, anomaly_ratio=0.20)
-    print(f"\nFiles saved:")
+    print("\nFiles saved:")
     print(f"  Full  : {full}")
     print(f"  Train : {train}")
     print(f"  Test  : {test}")

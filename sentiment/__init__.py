@@ -32,8 +32,8 @@ Evaluation::
     python -m sentiment.evaluate
 """
 
-from sentiment.models    import SentimentAnalyzer, get_analyzer
-from sentiment.data_prep import LABELS, LABEL_TO_INT, INT_TO_LABEL
+from sentiment.data_prep import INT_TO_LABEL, LABEL_TO_INT, LABELS
+from sentiment.models import SentimentAnalyzer, get_analyzer
 
 __all__ = [
     "SentimentAnalyzer",

@@ -1,6 +1,4 @@
 """
-sentiment/evaluate.py
-======================
 Standalone evaluation of trained sentiment classifiers.
 Prints per-class metrics and a cross-model comparison table.
 
@@ -10,14 +8,16 @@ Usage:
 
 import os
 import sys
-import numpy as np
-import joblib
 
+import joblib
 from sklearn.metrics import (
-    accuracy_score, f1_score, classification_report, confusion_matrix,
+    accuracy_score,
+    classification_report,
+    confusion_matrix,
+    f1_score,
 )
 
-from sentiment.data_prep import load_jsonl, split, load_vectorizer, LABELS
+from sentiment.data_prep import LABELS, load_jsonl, split
 
 ROOT      = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MODEL_DIR = os.path.join(ROOT, "models", "sentiment")
@@ -31,7 +31,7 @@ def evaluate_all(data_path: str = DATA_PATH, model_dir: str = MODEL_DIR) -> list
     Returns list of dicts: {name, accuracy, macro_f1, per_class}.
     """
     print(f"\n{'='*64}")
-    print(f"  LevelUp Sentiment Classifier - Evaluation")
+    print("  LevelUp Sentiment Classifier - Evaluation")
     print(f"{'='*64}")
     print(f"  Data   : {data_path}")
     print(f"  Models : {model_dir}\n")
@@ -82,21 +82,21 @@ def evaluate_all(data_path: str = DATA_PATH, model_dir: str = MODEL_DIR) -> list
         print(f"  {display_name}")
         print(f"  Accuracy={acc:.4f}  MacroF1={macro_f1:.4f}  WeightedF1={wtd_f1:.4f}")
 
-        print(f"\n  Per-class F1:")
+        print("\n  Per-class F1:")
         for lbl in LABELS:
             f1  = report[lbl]["f1-score"]
             prec = report[lbl]["precision"]
             rec  = report[lbl]["recall"]
             print(f"    {lbl:<12}  F1={f1:.4f}  P={prec:.4f}  R={rec:.4f}")
 
-        print(f"\n  Confusion Matrix (rows=actual, cols=predicted):")
+        print("\n  Confusion Matrix (rows=actual, cols=predicted):")
         header = "".join(f"{l:>12}" for l in LABELS)
         print(f"  {'':>12}{header}")
         for i, row in enumerate(cm):
             vals = "".join(f"{v:>12}" for v in row)
             print(f"  {LABELS[i]:>12}{vals}")
 
-        print(f"\n  Full report:")
+        print("\n  Full report:")
         print(classification_report(y_test, y_pred, target_names=LABELS, zero_division=0))
 
         summary.append({

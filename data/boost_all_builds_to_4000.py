@@ -1,6 +1,4 @@
 """
-boost_all_builds_to_4000.py
-============================
 Ensures every build has 4000+ training samples by:
 
   1. Loading all existing labeled samples per build
@@ -15,11 +13,14 @@ Run:
     PYTHONPATH=. venv/Scripts/python.exe data/boost_all_builds_to_4000.py
 """
 
-import os, json, random
+import json
+import os
+import random
 from collections import defaultdict
+
 from datasets import load_dataset
 
-# ── Paths ─────────────────────────────────────────────────────────────────────
+# Paths
 TRAIN_JSONL    = os.path.join("data", "raw", "finetune_train.jsonl")
 VAL_JSONL      = os.path.join("data", "raw", "finetune_val.jsonl")
 MISSING_DIR    = os.path.join("data", "raw", "missing_builds")
@@ -27,7 +28,7 @@ OUT_TRAIN      = os.path.join("data", "raw", "finetune_train_v2.jsonl")
 OUT_VAL        = os.path.join("data", "raw", "finetune_val_v2.jsonl")
 TARGET         = 4000
 
-# ── System prompts ─────────────────────────────────────────────────────────────
+# System prompts
 SYSTEM_PROMPTS = {
     "TITAN": (
         "You are TITAN, the AI companion for LevelUp's STRENGTH build — an RPG "
@@ -81,7 +82,7 @@ SYSTEM_PROMPTS = {
     ),
 }
 
-# ── Keyword classifiers ────────────────────────────────────────────────────────
+# Keyword classifiers
 # Each build has primary and secondary keywords
 # Primary keywords = strong signal (score 3)
 # Secondary keywords = moderate signal (score 1)
@@ -220,7 +221,7 @@ def make_sample(build, user, assistant):
         "assistant": assistant.strip(),
     }
 
-# ── Step 1: Load all existing samples ─────────────────────────────────────────
+# Step 1: Load all existing samples
 
 print("=" * 60)
 print("LevelUp AI -- Boost All Builds to 4000+")
@@ -276,7 +277,7 @@ print("\nAfter loading all sources:")
 for b in SYSTEM_PROMPTS:
     print(f"  {b}: {len(build_pools[b]):,} samples")
 
-# ── Step 2: Re-tag GENERIC samples ────────────────────────────────────────────
+# Step 2: Re-tag GENERIC samples
 
 print(f"\n[2/5] Re-tagging {len(generic_pool):,} GENERIC samples ...")
 re_tagged = defaultdict(list)
@@ -309,7 +310,7 @@ print("\nAfter re-tagging:")
 for b in SYSTEM_PROMPTS:
     print(f"  {b}: {len(build_pools[b]):,} samples  (need {max(0, TARGET - len(build_pools[b])):,} more)")
 
-# ── Step 3: HuggingFace top-ups for any build still under 4000 ────────────────
+# Step 3: HuggingFace top-ups for any build still under 4000
 
 print(f"\n[3/5] HuggingFace top-ups for builds under {TARGET:,} ...")
 
@@ -429,9 +430,9 @@ if len(build_pools["GG"]) < TARGET:
         max_samples=2000,
     )
 
-# ── Step 4: Cap each build at 5000, shuffle, and split ────────────────────────
+# Step 4: Cap each build at 5000, shuffle, and split
 
-print(f"\n[4/5] Final counts and train/val split ...")
+print("\n[4/5] Final counts and train/val split ...")
 
 CAP = 5000
 all_train, all_val = [], []
@@ -462,9 +463,9 @@ for build in SYSTEM_PROMPTS:
 random.shuffle(all_train)
 random.shuffle(all_val)
 
-# ── Step 5: Save ───────────────────────────────────────────────────────────────
+# Step 5: Save
 
-print(f"\n[5/5] Saving new dataset files ...")
+print("\n[5/5] Saving new dataset files ...")
 
 def save_jsonl(path, samples):
     with open(path, "w", encoding="utf-8") as f:
@@ -476,7 +477,7 @@ def save_jsonl(path, samples):
 save_jsonl(OUT_TRAIN, all_train)
 save_jsonl(OUT_VAL, all_val)
 
-# ── Summary ────────────────────────────────────────────────────────────────────
+# Summary
 
 print("\n" + "=" * 60)
 print("DONE -- Final Dataset Summary")
@@ -491,5 +492,5 @@ print("-" * 35)
 print(f"{'TOTAL':<12} {sum(final_counts.values()):>8,}")
 print(f"\nTrain file : {OUT_TRAIN}  ({len(all_train):,} samples)")
 print(f"Val file   : {OUT_VAL}  ({len(all_val):,} samples)")
-print(f"\nNext step  : rename v2 files to replace originals, then run training.")
+print("\nNext step  : rename v2 files to replace originals, then run training.")
 print("=" * 60)

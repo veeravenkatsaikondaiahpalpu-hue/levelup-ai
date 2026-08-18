@@ -1,6 +1,4 @@
 """
-anomaly_detection/evaluate.py
-==============================
 Standalone evaluation script -runs all three trained classifiers
 against the held-out test split and prints a comparison table.
 
@@ -11,16 +9,15 @@ Usage:
 
 import os
 import sys
-import numpy as np
-import joblib
 
+import joblib
 from sklearn.metrics import (
     accuracy_score,
+    classification_report,
+    confusion_matrix,
+    f1_score,
     precision_score,
     recall_score,
-    f1_score,
-    confusion_matrix,
-    classification_report,
 )
 
 from anomaly_detection.data_prep import load_csv
@@ -46,7 +43,7 @@ def evaluate_all(test_csv: str = TEST_CSV, model_dir: str = MODEL_DIR) -> list[d
         List of dicts {name, accuracy, precision, recall, f1}.
     """
     print(f"\n{'='*62}")
-    print(f"  LevelUp Anomaly Detector -Evaluation")
+    print("  LevelUp Anomaly Detector -Evaluation")
     print(f"{'='*62}")
     print(f"  Test set : {test_csv}")
     print(f"  Models   : {model_dir}\n")
@@ -92,12 +89,12 @@ def evaluate_all(test_csv: str = TEST_CSV, model_dir: str = MODEL_DIR) -> list[d
         print(f"{'-'*62}")
         print(f"  {display_name}")
         print(f"  Accuracy={acc:.4f}  Precision={prec:.4f}  Recall={rec:.4f}  F1={f1:.4f}")
-        print(f"\n  Confusion Matrix:")
-        print(f"              Predicted")
-        print(f"              Normal   Anomaly")
+        print("\n  Confusion Matrix:")
+        print("              Predicted")
+        print("              Normal   Anomaly")
         print(f"  Actual Normal   {cm[0][0]:5d}    {cm[0][1]:5d}   (FP={cm[0][1]})")
         print(f"  Actual Anomaly  {cm[1][0]:5d}    {cm[1][1]:5d}   (FN={cm[1][0]})")
-        print(f"\n  Detailed report:")
+        print("\n  Detailed report:")
         print(classification_report(
             y_test, y_pred,
             target_names=["normal", "anomaly"],
@@ -115,7 +112,7 @@ def evaluate_all(test_csv: str = TEST_CSV, model_dir: str = MODEL_DIR) -> list[d
     # -- Summary table -----------------------------------------------------
     if summary:
         print(f"{'='*62}")
-        print(f"  COMPARISON TABLE")
+        print("  COMPARISON TABLE")
         print(f"  {'Model':<25} {'Acc':>7} {'Prec':>7} {'Rec':>7} {'F1':>7}")
         print(f"  {'-'*57}")
         for row in summary:

@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      # Runtime + dev extras only. The training extra pulls CUDA wheels and is
+      # not needed to lint or to run the guardrail / XP-engine tests.
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Lint
+        run: ruff check .
+
+      - name: Test
+        env:
+          LEVELUP_LOAD_MODEL: "false"
+          LEVELUP_LOAD_VISION: "false"
+        run: pytest -q

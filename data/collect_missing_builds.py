@@ -1,6 +1,4 @@
 """
-collect_missing_builds.py
-=========================
 Collects training data for the 3 missing/underrepresented builds:
 
   TITAN   (Strength)   -- 0 labeled samples  -> use existing Reddit strength CSVs
@@ -17,7 +15,14 @@ Run:
     PYTHONPATH=. venv/Scripts/python.exe data/collect_missing_builds.py
 """
 
-import os, json, csv, time, html, re, requests
+import csv
+import html
+import json
+import os
+import re
+import time
+
+import requests
 from datasets import load_dataset
 
 OUT_DIR = os.path.join("data", "raw", "missing_builds")
@@ -25,7 +30,7 @@ os.makedirs(OUT_DIR, exist_ok=True)
 
 HEADERS = {"User-Agent": "LevelUpAI/1.0 SRH-Stuttgart research (student)"}
 
-# ── System prompts for each build ────────────────────────────────────────────
+# System prompts for each build
 
 TITAN_SYSTEM = (
     "You are TITAN, the AI companion for LevelUp's STRENGTH build — an RPG "
@@ -54,7 +59,7 @@ PHANTOM_SYSTEM = (
     "Help the user become fast, agile, and unstoppable."
 )
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
+# Helpers
 
 def clean(text):
     if not text: return ""
@@ -148,9 +153,7 @@ def save_jsonl(path, samples):
     print(f"  Saved {len(samples):,} samples -> {path}")
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 # TITAN — convert existing Reddit strength CSVs
-# ═══════════════════════════════════════════════════════════════════════════════
 
 def collect_titan():
     print("\n" + "="*60)
@@ -207,9 +210,7 @@ def collect_titan():
     return samples
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 # SAGE — Reddit wellness subs + HuggingFace mental health
-# ═══════════════════════════════════════════════════════════════════════════════
 
 def collect_sage():
     print("\n" + "="*60)
@@ -292,9 +293,7 @@ def collect_sage():
     return samples
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 # PHANTOM — Reddit movement subs + handcrafted Q&A
-# ═══════════════════════════════════════════════════════════════════════════════
 
 def collect_phantom():
     print("\n" + "="*60)
@@ -353,7 +352,7 @@ def collect_phantom():
     return samples
 
 
-# ── Main ──────────────────────────────────────────────────────────────────────
+# Main
 
 if __name__ == "__main__":
     print("=" * 60)

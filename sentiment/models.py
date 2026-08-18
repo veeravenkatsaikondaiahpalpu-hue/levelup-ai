@@ -1,6 +1,4 @@
 """
-sentiment/models.py
-====================
 Train and serve six sentiment classifiers for LevelUp AI.
 
 Classifiers (all use dual TF-IDF: word + char n-grams):
@@ -32,27 +30,28 @@ Inference:
 """
 
 import os
-import warnings
-import numpy as np
-import joblib
 
-from sklearn.linear_model  import LogisticRegression
-from sklearn.svm           import LinearSVC
-from sklearn.calibration   import CalibratedClassifierCV
-from sklearn.ensemble      import VotingClassifier, StackingClassifier
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics       import accuracy_score, classification_report, f1_score
-from xgboost               import XGBClassifier
-from lightgbm              import LGBMClassifier
+# Keyword lexicon (domain-specific boost for conversational text)
+import re as _re
+import warnings
+
+import joblib
+from lightgbm import LGBMClassifier
+from sklearn.calibration import CalibratedClassifierCV
+from sklearn.ensemble import StackingClassifier, VotingClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score, classification_report, f1_score
+from sklearn.svm import LinearSVC
+from xgboost import XGBClassifier
 
 from sentiment.data_prep import (
-    load_jsonl, split, fit_dual_vectorizer,
-    oversample_minority, clean_text, INT_TO_LABEL, LABELS,
+    INT_TO_LABEL,
+    LABELS,
+    clean_text,
+    fit_dual_vectorizer,
+    load_jsonl,
+    split,
 )
-
-# ── Keyword lexicon (domain-specific boost for conversational text) ────────────
-
-import re as _re
 
 # Phrase patterns (matched as substrings on lowercased text)
 _STRUGGLING_PHRASES = [
@@ -116,13 +115,13 @@ def _detect_keyword_class(text: str) -> tuple[str | None, int]:
         return "motivated", m_hits
     return None, 0  # tie → let ML decide
 
-# ── Paths ─────────────────────────────────────────────────────────────────────
+# Paths
 
 ROOT      = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MODEL_DIR = os.path.join(ROOT, "models", "sentiment")
 
 
-# ── Training ──────────────────────────────────────────────────────────────────
+# Training
 
 def train(
     data_jsonl: str,
@@ -145,17 +144,17 @@ def train(
     """
     os.makedirs(model_dir, exist_ok=True)
 
-    # ── Load ──────────────────────────────────────────────────────────────
+    # Load
     print("  Loading data ...")
     texts, labels = load_jsonl(data_jsonl)
     dist = {lbl: int((labels == i).sum()) for i, lbl in enumerate(LABELS)}
     print(f"  Loaded {len(texts):,} samples  |  {dist}")
 
-    # ── Split ─────────────────────────────────────────────────────────────
+    # Split
     train_texts, test_texts, y_train, y_test = split(texts, labels)
     print(f"  Train: {len(train_texts):,}   Test: {len(test_texts):,}")
 
-    # ── Dual TF-IDF vectoriser (word + char n-grams) ──────────────────────
+    # Dual TF-IDF vectoriser (word + char n-grams)
     print("  Fitting Dual TF-IDF vectoriser (word 1-3gram + char 2-5gram) ...")
     vec_path = os.path.join(model_dir, "dual_vectorizer.joblib")
     dv       = fit_dual_vectorizer(train_texts, save_path=vec_path)
@@ -164,12 +163,12 @@ def train(
     print(f"  Feature dimensions: {X_train.shape[1]:,}  "
           f"(word={len(dv.word_vec.vocabulary_):,} + char={len(dv.char_vec.vocabulary_):,})")
 
-    # ── Also keep legacy single vectoriser for backwards compatibility ─────
+    # Also keep legacy single vectoriser for backwards compatibility
     from sentiment.data_prep import fit_vectorizer
     legacy_vec_path = os.path.join(model_dir, "tfidf_vectorizer.joblib")
     lv = fit_vectorizer(train_texts, save_path=legacy_vec_path)
 
-    # ── Build base classifiers ────────────────────────────────────────────
+    # Build base classifiers
     lr = LogisticRegression(
         class_weight="balanced", max_iter=1000, C=1.5,
         solver="lbfgs", random_state=42,
@@ -262,7 +261,7 @@ def train(
     return results
 
 
-# ── Inference ─────────────────────────────────────────────────────────────────
+# Inference
 
 class SentimentAnalyzer:
     """
@@ -326,7 +325,7 @@ class SentimentAnalyzer:
         # Priority: stacking > voting > lgb > svc > lr
         return self.stacking or self.voting or self.lgb or self.svc or self.lr
 
-    # ── Prediction ────────────────────────────────────────────────────────
+    # Prediction
 
     def predict(self, text: str) -> dict:
         """
@@ -430,14 +429,14 @@ class SentimentAnalyzer:
         return [self.predict(t) for t in texts]
 
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
+# Helpers
 
 def _load_opt(path: str):
     """Load a joblib file if it exists, else return None."""
     return joblib.load(path) if os.path.exists(path) else None
 
 
-# ── Module-level singleton ────────────────────────────────────────────────────
+# Module-level singleton
 
 _analyzer: SentimentAnalyzer | None = None
 

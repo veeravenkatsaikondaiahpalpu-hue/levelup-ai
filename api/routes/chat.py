@@ -1,28 +1,37 @@
 """
-api/routes/chat.py
-==================
-FastAPI router for the LevelUp AI chatbot endpoint.
+The main chatbot endpoint — this is what the React Native app calls on every message.
 
 Endpoints:
-  POST /api/chat          -- generate a reply from the AI companion
-  GET  /api/chat/health   -- check if model is loaded and ready
+  POST /api/chat          — generate a reply from the AI companion
+  GET  /api/chat/health   — check if the model is loaded and ready
 """
 
 from __future__ import annotations
 
+import logging
+import os
 import time
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
-from chatbot.inference import get_chat_model, LevelUpChat
+from chatbot.guardrails import Guardrail
+from chatbot.guardrails.demo_scenario import DEMO_ON, DEMO_TEMPERATURE, inject_secret
+from chatbot.inference import LevelUpChat
 from chatbot.prompt_template import FINETUNE_SYSTEM_PROMPTS
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
 
+# Runtime guardrail ("AI firewall") wrapped around the model. Inspects input
+# before generation and output after. Default state via LEVELUP_GUARDRAILS;
+# a per-request `safe_mode` flag (from the app's Firewall toggle) overrides it.
+GUARDRAILS_ON = os.getenv("LEVELUP_GUARDRAILS", "on").lower() not in ("off", "false", "0")
+_guard = Guardrail()
 
-# ── Request / Response models ──────────────────────────────────────────────────
+
+# Request / Response models
 
 class ChatMessage(BaseModel):
     role:    str = Field(..., description="'user' or 'assistant'")
@@ -34,9 +43,9 @@ class ChatRequest(BaseModel):
     message: str = Field(..., description="The user's latest message", min_length=1, max_length=2000)
     history: list[ChatMessage] = Field(default=[], description="Prior conversation turns (max 10)")
 
-    # Runtime context injected from the user's profile (optional)
-    # If provided, the full dynamic system prompt is used instead of the fine-tune prompt
-    user_context: Optional[dict] = Field(
+    # If the app provides user stats (XP, streak, badge), we build a richer system
+    # prompt that references those numbers. Without this, we use the standard fine-tune prompt.
+    user_context: dict | None = Field(
         default=None,
         description="UserState context dict from xp_engine (optional)"
     )
@@ -51,13 +60,25 @@ class ChatRequest(BaseModel):
         description="If true, return base64-encoded MP3 audio alongside the text reply",
     )
 
+    # Guardrail "Firewall" toggle from the app UI. None = use the server default
+    # (LEVELUP_GUARDRAILS); True/False = force the guardrail on/off for this request.
+    safe_mode: bool | None = Field(
+        default=None,
+        description="Per-request guardrail override: true = firewall on, false = off",
+    )
+
 
 class ChatResponse(BaseModel):
     reply:      str
     build:      str
     latency_ms: int
-    tokens_out: Optional[int] = None
-    audio_b64:  Optional[str] = None   # base64-encoded MP3 when audio=true is requested
+    tokens_out: int | None = None
+    audio_b64:  str | None = None   # base64-encoded MP3 when audio=true is requested
+
+    # Guardrail telemetry — lets the app (and the demo) show what the firewall did.
+    flagged:   bool = False            # true if any rule matched (input or output)
+    blocked:   bool = False            # true if the input was blocked before generation
+    guardrail: dict | None = None   # {"input": {...}, "output": {...}} scan details
 
 
 class HealthResponse(BaseModel):
@@ -66,7 +87,7 @@ class HealthResponse(BaseModel):
     builds:      list[str]
 
 
-# ── Dependency: get the loaded model ──────────────────────────────────────────
+# Dependency: get the loaded model
 
 def get_model(request: Request) -> LevelUpChat:
     """Retrieve the LevelUpChat instance stored in app state."""
@@ -76,7 +97,7 @@ def get_model(request: Request) -> LevelUpChat:
     return model
 
 
-# ── Endpoints ──────────────────────────────────────────────────────────────────
+# Endpoints
 
 @router.get("/health", response_model=HealthResponse)
 async def health(request: Request):
@@ -103,16 +124,16 @@ async def chat(req: ChatRequest, model: LevelUpChat = Depends(get_model)):
             detail=f"Unknown build '{build}'. Choose from: {list(FINETUNE_SYSTEM_PROMPTS.keys())}"
         )
 
-    # Build the system prompt
-    system_prompt: Optional[str] = None
+    # If user stats were provided, build the rich dynamic system prompt.
+    # If anything fails (missing models, bad context) we fall back to the
+    # standard fine-tune prompt — the chat always returns something.
+    system_prompt: str | None = None
     if req.user_context:
-        # Use the rich runtime prompt (includes user stats, streak, recent activity)
         try:
-            import sys
-            from pathlib import Path
-            sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+            # Imported lazily: the sentiment model is optional, so a missing
+            # dependency degrades to the standard prompt instead of a 500.
+            from chatbot.sentiment import predict as sentiment_predict
             from chatbot.system_prompt import build_system_prompt, detect_mode
-            from chatbot.sentiment import predict as sentiment_predict   # optional
             try:
                 sentiment = sentiment_predict(req.message)
             except Exception:
@@ -120,10 +141,41 @@ async def chat(req: ChatRequest, model: LevelUpChat = Depends(get_model)):
             mode = detect_mode(req.message, sentiment)
             system_prompt = build_system_prompt(req.user_context, sentiment=sentiment, mode=mode)
         except Exception:
-            system_prompt = None  # fall back to fine-tune prompt
+            system_prompt = None
 
-    # Convert history to the format expected by inference
+    # Keep only the last 10 turns so we don't overflow the context window
     history = [{"role": m.role, "content": m.content} for m in req.history[-10:]]
+
+    # Effective firewall state: the app's toggle wins; otherwise the server default.
+    guardrails_active = GUARDRAILS_ON if req.safe_mode is None else bool(req.safe_mode)
+
+    # Demo scenario: plant confidential data in the model's context so an
+    # injection has something real to leak (Case 1 vs Case 2). Off by default;
+    # enabled only when the server runs with LEVELUP_DEMO=on.
+    gen_temperature = req.temperature
+    if DEMO_ON:
+        base_prompt = system_prompt or FINETUNE_SYSTEM_PROMPTS.get(build, FINETUNE_SYSTEM_PROMPTS["ORACLE"])
+        system_prompt = inject_secret(base_prompt)
+        gen_temperature = DEMO_TEMPERATURE  # deterministic leak on stage
+
+    # Guardrail: INPUT scan
+    # Inspect the untrusted surface (message + user turns + ingested context)
+    # BEFORE the model sees it. A blocked input never reaches generation.
+    guardrail_report: dict | None = None
+    if guardrails_active:
+        in_verdict = _guard.check_input(
+            req.message, history=history, user_context=req.user_context,
+        )
+        guardrail_report = {"input": in_verdict.as_dict()}
+        if in_verdict.blocked:
+            return ChatResponse(
+                reply=_guard.safe_refusal(build),
+                build=build,
+                latency_ms=0,
+                flagged=True,
+                blocked=True,
+                guardrail=guardrail_report,
+            )
 
     t0 = time.time()
     reply = model.generate(
@@ -132,24 +184,42 @@ async def chat(req: ChatRequest, model: LevelUpChat = Depends(get_model)):
         history=history if history else None,
         system_override=system_prompt,
         max_new_tokens=req.max_tokens,
-        temperature=req.temperature,
+        temperature=gen_temperature,
     )
     latency = int((time.time() - t0) * 1000)
 
-    # Optional TTS audio
-    audio_b64: Optional[str] = None
+    # Guardrail: OUTPUT scan
+    # Catch a successful injection by its symptoms: prompt leakage, identity
+    # break, or an exfiltration channel (EchoLeak-style auto-loading image).
+    flagged = bool(guardrail_report and guardrail_report["input"]["findings"])
+    blocked_out = False
+    if guardrails_active:
+        out_verdict = _guard.check_output(reply)
+        reply = out_verdict.safe_text or reply
+        guardrail_report = (guardrail_report or {})
+        guardrail_report["output"] = out_verdict.as_dict()
+        flagged = flagged or out_verdict.flagged
+        blocked_out = out_verdict.blocked
+
+    # Optional TTS audio (of the sanitised reply)
+    audio_b64: str | None = None
     if req.audio:
         try:
             import base64
+
             from voice.tts import speak_async
             audio_bytes = await speak_async(reply, build=build)
             audio_b64 = base64.b64encode(audio_bytes).decode("utf-8")
-        except Exception as e:
-            print(f"[TTS] Warning: could not generate audio: {e}")
+        except Exception:
+            # Audio is a nice-to-have; the text reply still goes out.
+            logger.warning("TTS failed - returning reply without audio", exc_info=True)
 
     return ChatResponse(
         reply=reply,
         build=build,
         latency_ms=latency,
         audio_b64=audio_b64,
+        flagged=flagged,
+        blocked=blocked_out,
+        guardrail=guardrail_report,
     )

@@ -1,6 +1,4 @@
 """
-anomaly_detection/data_prep.py
-================================
 Data loading and preprocessing for the anomaly detection pipeline.
 
 Loads the anomaly CSV, extracts the 8 numeric features, applies
@@ -8,13 +6,14 @@ StandardScaler, and handles serialisation so the same scaler can
 be reloaded at inference time.
 """
 
-import os
 import csv
+import os
+
+import joblib
 import numpy as np
 from sklearn.preprocessing import StandardScaler
-import joblib
 
-# ── Feature and label definitions ────────────────────────────────────────────
+# Feature and label definitions
 
 FEATURES = [
     "activities_per_day",
@@ -32,7 +31,7 @@ TYPE_TO_INT   = {t: i for i, t in enumerate(ANOMALY_TYPES)}
 INT_TO_TYPE   = {i: t for t, i in TYPE_TO_INT.items()}
 
 
-# ── Loaders ───────────────────────────────────────────────────────────────────
+# Loaders
 
 def load_csv(path: str) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
@@ -58,7 +57,7 @@ def load_csv(path: str) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     return X, y_bin, y_type
 
 
-# ── Scaler helpers ────────────────────────────────────────────────────────────
+# Scaler helpers
 
 def fit_scaler(X_train: np.ndarray, save_path: str | None = None) -> StandardScaler:
     """
@@ -84,7 +83,7 @@ def load_scaler(path: str) -> StandardScaler:
     return joblib.load(path)
 
 
-# ── Inference helper ──────────────────────────────────────────────────────────
+# Inference helper
 
 def features_from_dict(d: dict) -> np.ndarray:
     """

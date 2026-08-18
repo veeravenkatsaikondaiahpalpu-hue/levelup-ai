@@ -1,23 +1,23 @@
 """
-scripts/make_run_doc.py
 Generate LevelUp_RunCommands.docx using python-docx.
 Run from project root: python scripts/make_run_doc.py
 """
 
+import os
+
 from docx import Document
-from docx.shared import Pt, Inches, RGBColor, Cm
+from docx.enum.table import WD_TABLE_ALIGNMENT
 from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.enum.table import WD_TABLE_ALIGNMENT, WD_ALIGN_VERTICAL
-from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
-import copy, os
+from docx.oxml.ns import qn
+from docx.shared import Inches, Pt, RGBColor
 
 OUTPUT = os.path.join(
     os.path.dirname(__file__), "..", "..", "LevelUp_RunCommands.docx"
 )
 OUTPUT = os.path.normpath(OUTPUT)
 
-# ── helpers ──────────────────────────────────────────────────────────────────
+# helpers
 
 def set_cell_bg(cell, hex_color):
     tc = cell._tc
@@ -138,7 +138,7 @@ def add_table(doc, headers, rows, col_widths_in=None):
     doc.add_paragraph()  # spacer
 
 
-# ── document setup ────────────────────────────────────────────────────────────
+# document setup
 
 doc = Document()
 
@@ -155,7 +155,7 @@ for section in doc.sections:
 doc.styles["Normal"].font.name = "Calibri"
 doc.styles["Normal"].font.size = Pt(11)
 
-# ── TITLE ─────────────────────────────────────────────────────────────────────
+# TITLE
 
 title_p = doc.add_paragraph()
 title_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -175,7 +175,7 @@ sub_run.font.color.rgb = RGBColor(0x70, 0x70, 0x70)
 
 doc.add_paragraph()  # spacer
 
-# ── SECTION 1: Prerequisites ──────────────────────────────────────────────────
+# SECTION 1: Prerequisites
 
 add_heading(doc, "1. Prerequisites")
 add_body(doc, "Ensure the following tools are installed before running the project:")
@@ -187,7 +187,7 @@ add_bullet(doc, "A HuggingFace account with token (to download LLaMA 3.2)")
 add_bullet(doc, "ElevenLabs API key (optional — enables per-build AI voices)")
 doc.add_paragraph()
 
-# ── SECTION 2: First-Time Setup ───────────────────────────────────────────────
+# SECTION 2: First-Time Setup
 
 add_heading(doc, "2. First-Time Setup")
 add_body(doc, "Run these commands once after cloning the repository.")
@@ -221,7 +221,7 @@ add_code_block(doc, [
 ])
 doc.add_paragraph()
 
-# ── SECTION 3: Environment Configuration ─────────────────────────────────────
+# SECTION 3: Environment Configuration
 
 add_heading(doc, "3. Environment Configuration")
 add_body(doc, 'Create a file named  .env  in the project root with the following contents:')
@@ -243,7 +243,7 @@ add_table(doc,
     col_widths_in=[1.5, 0.9, 2.8, 1.8]
 )
 
-# ── SECTION 4: Running the Project ───────────────────────────────────────────
+# SECTION 4: Running the Project
 
 add_heading(doc, "4. Running the Project")
 add_body(doc, "Open two separate terminal windows / command prompts.")
@@ -267,7 +267,7 @@ add_body(doc, "Then open your browser and navigate to:")
 add_code_block(doc, ["http://localhost:8080/app.html"])
 doc.add_paragraph()
 
-# ── SECTION 5: API Endpoints ──────────────────────────────────────────────────
+# SECTION 5: API Endpoints
 
 add_heading(doc, "5. API Endpoints")
 add_body(doc, "All endpoints are served on  http://localhost:8000  when the backend is running.")
@@ -286,7 +286,7 @@ add_table(doc,
     col_widths_in=[2.0, 0.8, 4.2]
 )
 
-# ── SECTION 6: Voice Features ─────────────────────────────────────────────────
+# SECTION 6: Voice Features
 
 add_heading(doc, "6. Voice Features")
 
@@ -318,7 +318,7 @@ add_table(doc,
     col_widths_in=[1.2, 5.8]
 )
 
-# ── SECTION 7: Model Training ─────────────────────────────────────────────────
+# SECTION 7: Model Training
 
 add_heading(doc, "7. Model Training (Optional)")
 add_body(doc, "Only required if you want to retrain the QLoRA fine-tuned LLaMA 3.2 3B model.")
@@ -347,7 +347,7 @@ add_table(doc,
     col_widths_in=[2.0, 5.0]
 )
 
-# ── SECTION 8: Troubleshooting ────────────────────────────────────────────────
+# SECTION 8: Troubleshooting
 
 add_heading(doc, "8. Troubleshooting")
 add_table(doc,
@@ -378,7 +378,7 @@ add_table(doc,
     col_widths_in=[1.8, 1.9, 3.3]
 )
 
-# ── FOOTER note ───────────────────────────────────────────────────────────────
+# FOOTER note
 doc.add_paragraph()
 note = doc.add_paragraph()
 note.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -390,7 +390,7 @@ note_run.font.size = Pt(10)
 note_run.italic = True
 note_run.font.color.rgb = RGBColor(0x70, 0x70, 0x70)
 
-# ── Save ──────────────────────────────────────────────────────────────────────
+# Save
 
 doc.save(OUTPUT)
 print(f"[OK] Saved: {OUTPUT}")

@@ -1,6 +1,4 @@
 """
-voice/tts.py
-============
 ElevenLabs Text-to-Speech integration for LevelUp AI.
 
 Every build gets its own VoiceProfile:
@@ -31,11 +29,10 @@ from __future__ import annotations
 
 import os
 import re
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Callable, Optional
 
-
-# ── Voice Profile dataclass ────────────────────────────────────────────────────
+# Voice Profile dataclass
 
 @dataclass
 class VoiceProfile:
@@ -61,7 +58,7 @@ class VoiceProfile:
     description:      str                   = ""
 
 
-# ── Text pre-processors ────────────────────────────────────────────────────────
+# Text pre-processors
 # Each returns the text exactly as ElevenLabs should hear it.
 # Techniques: punctuation shaping, line-break pacing, filler removal.
 
@@ -171,7 +168,7 @@ def _preprocess_gg(text: str) -> str:
     return text.strip()
 
 
-# ── Per-build profiles ─────────────────────────────────────────────────────────
+# Per-build profiles
 # Voice IDs default to free ElevenLabs library voices.
 # Set ELEVENLABS_VOICE_<BUILD> in .env to override with your own cloned voices.
 
@@ -255,7 +252,7 @@ _FALLBACK_BUILD = "ORACLE"
 _MODEL_ID = os.getenv("ELEVENLABS_MODEL", "eleven_turbo_v2_5")
 
 # Global API key
-_API_KEY: Optional[str] = os.getenv("ELEVENLABS_API_KEY")
+_API_KEY: str | None = os.getenv("ELEVENLABS_API_KEY")
 
 
 def get_profile(build: str) -> VoiceProfile:
@@ -263,16 +260,16 @@ def get_profile(build: str) -> VoiceProfile:
     return BUILD_PROFILES.get(build.upper(), BUILD_PROFILES[_FALLBACK_BUILD])
 
 
-# ── Synchronous TTS ───────────────────────────────────────────────────────────
+# Synchronous TTS
 
 def text_to_audio_bytes(
     text:    str,
     build:   str = "ORACLE",
-    api_key: Optional[str] = None,
+    api_key: str | None = None,
     # Optional overrides — if None, use the build's profile defaults
-    stability:        Optional[float] = None,
-    similarity_boost: Optional[float] = None,
-    style:            Optional[float] = None,
+    stability:        float | None = None,
+    similarity_boost: float | None = None,
+    style:            float | None = None,
 ) -> bytes:
     """
     Convert text to MP3 audio bytes using the build's voice profile.
@@ -302,8 +299,8 @@ def text_to_audio_bytes(
         )
 
     try:
-        from elevenlabs.client import ElevenLabs
         from elevenlabs import VoiceSettings
+        from elevenlabs.client import ElevenLabs
     except ImportError:
         raise RuntimeError(
             "elevenlabs package not installed. "
@@ -338,12 +335,12 @@ def text_to_audio_bytes(
     return b"".join(audio_generator)
 
 
-# ── Async TTS (for FastAPI endpoints) ─────────────────────────────────────────
+# Async TTS (for FastAPI endpoints)
 
 async def speak_async(
     text:    str,
     build:   str = "ORACLE",
-    api_key: Optional[str] = None,
+    api_key: str | None = None,
 ) -> bytes:
     """
     Async wrapper — runs in a thread pool so it doesn't block FastAPI.
@@ -357,7 +354,7 @@ async def speak_async(
     )
 
 
-# ── Availability check ────────────────────────────────────────────────────────
+# Availability check
 
 def tts_available() -> bool:
     """Returns True if ElevenLabs key is set and the package is installed."""
@@ -385,7 +382,7 @@ def list_profiles() -> dict[str, dict]:
     }
 
 
-# ── Quick CLI test ─────────────────────────────────────────────────────────────
+# Quick CLI test
 # python -m voice.tts TITAN "You crushed it. Now recover."
 # python -m voice.tts GG "bro that was CRACKED, no cap GG EZ"
 # python -m voice.tts SAGE "Breathe. Notice the stillness inside you."

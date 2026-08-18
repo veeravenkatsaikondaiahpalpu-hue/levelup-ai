@@ -1,37 +1,35 @@
 """
-train.py
-========
-QLoRA fine-tuning for LevelUp AI chatbot using TRL + PEFT on LLaMA 3.
+QLoRA fine-tuning for the LevelUp AI chatbot — runs on any single GPU with 8GB+ VRAM.
 
-Architecture:
-  - Base model  : meta-llama/Meta-Llama-3-8B-Instruct  (configurable)
-  - Quantisation: 4-bit NF4 (BitsAndBytes) to fit on a single GPU
-  - LoRA adapters: r=16, alpha=32, targeting all attention + MLP projections
-  - Trainer     : TRL SFTTrainer with sequence packing for efficiency
+How it works:
+  - Base model   : unsloth/Llama-3.2-3B-Instruct (small enough for an 8GB GPU)
+  - Quantisation : 4-bit NF4 via BitsAndBytes — cuts VRAM usage roughly in half
+  - LoRA adapters: r=16, alpha=32 on all attention + MLP projections (~1-2% of params trainable)
+  - Trainer      : TRL SFTTrainer (handles the LLaMA 3 chat template automatically)
 
-Usage:
-  # Full dataset (all builds)
+How to run:
+  # Train on all 7 builds at once
   python -m chatbot.fine_tuning.train
 
-  # Single build only (faster per-build adapter)
+  # Train only one build (much faster, good for per-persona experiments)
   python -m chatbot.fine_tuning.train --build TITAN
 
-  # Quick smoke test (100 steps)
+  # Quick sanity check — 1 epoch on 200 samples to make sure the pipeline works
   python -m chatbot.fine_tuning.train --smoke_test
 
-  # Resume from checkpoint
+  # Resume from a saved checkpoint if training was interrupted
   python -m chatbot.fine_tuning.train --resume_from models/checkpoints/levelup-qlora/checkpoint-500
 
-Output:
-  models/checkpoints/{run_name}/          <- training checkpoints
-  models/final/{run_name}/                <- merged LoRA adapter (ready for inference)
+Where things get saved:
+  models/checkpoints/{run_name}/    ← checkpoints every N steps (keeps last 3)
+  models/final/{run_name}/          ← final adapter weights, ready to load for inference
 """
 
 import argparse
 import os
 from pathlib import Path
 
-# ── Load .env and login to HuggingFace ────────────────────────────────────────
+# Load .env and login to HuggingFace
 _ROOT_ENV = Path(__file__).resolve().parents[2] / ".env"
 if _ROOT_ENV.exists():
     for _line in _ROOT_ENV.read_text(encoding="utf-8").splitlines():
@@ -49,17 +47,15 @@ if _hf_token and os.environ.get("HF_HUB_OFFLINE", "0") != "1":
         print(f"[HF] Login skipped ({_e.__class__.__name__}) — using cached model")
 
 import torch
-from datasets import Dataset
 from peft import LoraConfig, TaskType, get_peft_model, prepare_model_for_kbit_training
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
     BitsAndBytesConfig,
-    TrainingArguments,
 )
-from trl import SFTTrainer, SFTConfig
+from trl import SFTConfig, SFTTrainer
 
-# ── Paths ──────────────────────────────────────────────────────────────────────
+# Paths
 ROOT         = Path(__file__).resolve().parents[2]
 CHECKPOINTS  = ROOT / "models" / "checkpoints"
 FINAL_MODELS = ROOT / "models" / "final"
@@ -67,29 +63,38 @@ CHECKPOINTS.mkdir(parents=True, exist_ok=True)
 FINAL_MODELS.mkdir(parents=True, exist_ok=True)
 
 
-# ── Configuration ──────────────────────────────────────────────────────────────
+# Configuration
 
-DEFAULT_MODEL = "unsloth/Llama-3.2-3B-Instruct"   # fits in 8GB VRAM; swap for 8B on cloud GPU
+DEFAULT_MODEL = "unsloth/Llama-3.2-3B-Instruct"  # 3B fits comfortably in 8GB VRAM; use 8B on a cloud A100
 
-# LoRA targets for LLaMA 3 — all attention projections + feed-forward gate/up/down
+# We target every attention and feed-forward projection in LLaMA 3.
+# Hitting all 7 modules gives the adapter broad control over the model's style.
 LORA_TARGET_MODULES = [
-    "q_proj", "k_proj", "v_proj", "o_proj",
-    "gate_proj", "up_proj", "down_proj",
+    "q_proj", "k_proj", "v_proj", "o_proj",   # attention
+    "gate_proj", "up_proj", "down_proj",        # MLP feed-forward
 ]
 
 
 def get_bnb_config() -> BitsAndBytesConfig:
-    """4-bit NF4 quantisation config for QLoRA."""
+    """
+    4-bit NF4 quantisation — the 'Q' in QLoRA.
+    Keeps the frozen base model at ~2GB instead of ~6GB, leaving room for gradients.
+    double_quant squeezes out another ~0.4GB by quantising the quantisation constants.
+    """
     return BitsAndBytesConfig(
         load_in_4bit=True,
         bnb_4bit_quant_type="nf4",
         bnb_4bit_compute_dtype=torch.bfloat16,
-        bnb_4bit_use_double_quant=True,   # nested quantisation saves ~0.4 GB
+        bnb_4bit_use_double_quant=True,
     )
 
 
 def get_lora_config(r: int = 16, alpha: int = 32, dropout: float = 0.05) -> LoraConfig:
-    """LoRA adapter config."""
+    """
+    LoRA adapter config.
+    r=16 means each weight update is factored into two matrices of rank 16.
+    alpha/r = 2.0 — moderate scaling, neither too timid nor too aggressive.
+    """
     return LoraConfig(
         r=r,
         lora_alpha=alpha,
@@ -100,14 +105,14 @@ def get_lora_config(r: int = 16, alpha: int = 32, dropout: float = 0.05) -> Lora
     )
 
 
-# ── Model + Tokenizer loading ──────────────────────────────────────────────────
+# Model + Tokenizer loading
 
 def load_model_and_tokenizer(model_name: str, use_4bit: bool = True):
     """
-    Load the base model with optional 4-bit quantisation and the tokenizer.
-    Returns (model, tokenizer).
+    Load the base model (optionally 4-bit quantised) plus its tokenizer.
+    Returns (model, tokenizer) ready for LoRA application.
     """
-    print(f"\nLoading model: {model_name}")
+    print(f"\nLoading base model: {model_name}")
 
     hf_token   = os.environ.get("HF_TOKEN")
     bnb_config = get_bnb_config() if use_4bit else None
@@ -115,24 +120,25 @@ def load_model_and_tokenizer(model_name: str, use_4bit: bool = True):
     model = AutoModelForCausalLM.from_pretrained(
         model_name,
         quantization_config=bnb_config,
-        device_map="auto",                # auto-places layers across available GPUs
+        device_map="auto",           # let HuggingFace decide how to spread across GPUs
         torch_dtype=torch.bfloat16,
         trust_remote_code=False,
-        attn_implementation="eager",      # use "flash_attention_2" if installed
+        attn_implementation="eager", # swap to "flash_attention_2" for ~30% speedup if installed
         token=hf_token,
     )
 
     if use_4bit:
+        # Required step before attaching LoRA to a quantised model
         model = prepare_model_for_kbit_training(model)
 
     tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=False,
                                               token=hf_token)
 
-    # LLaMA 3 doesn't have a pad token by default — use EOS
+    # LLaMA 3 ships without a pad token — we reuse EOS, which is standard practice
     if tokenizer.pad_token is None:
         tokenizer.pad_token    = tokenizer.eos_token
         tokenizer.pad_token_id = tokenizer.eos_token_id
-    tokenizer.padding_side = "right"   # required for causal LM training
+    tokenizer.padding_side = "right"  # must be right for causal LM training
 
     trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
     total     = sum(p.numel() for p in model.parameters())
@@ -141,7 +147,7 @@ def load_model_and_tokenizer(model_name: str, use_4bit: bool = True):
     return model, tokenizer
 
 
-# ── Training ───────────────────────────────────────────────────────────────────
+# Training
 
 def train(
     model_name:    str   = DEFAULT_MODEL,
@@ -164,7 +170,7 @@ def train(
     eval_steps:         int   = 200,
     logging_steps:      int   = 25,
 ):
-    # ── Dataset ───────────────────────────────────────────────────────────────
+    # Dataset
     import sys
     sys.path.insert(0, str(ROOT))
     from chatbot.fine_tuning.dataset_prep import load_levelup_dataset
@@ -182,14 +188,14 @@ def train(
         logging_steps = 10
         print("\n[SMOKE TEST MODE] Running 1 epoch on 200 samples")
 
-    # ── Run name ──────────────────────────────────────────────────────────────
+    # Run name
     if run_name is None:
         suffix = f"-{build_filter.lower()}" if build_filter else "-all"
         run_name = f"levelup-qlora{suffix}"
 
     output_dir = str(CHECKPOINTS / run_name)
 
-    # ── Model ─────────────────────────────────────────────────────────────────
+    # Model
     model, tokenizer = load_model_and_tokenizer(model_name)
 
     # Apply LoRA
@@ -197,7 +203,7 @@ def train(
     model = get_peft_model(model, lora_config)
     model.print_trainable_parameters()
 
-    # ── SFT Config ────────────────────────────────────────────────────────────
+    # SFT Config
     sft_config = SFTConfig(
         output_dir=output_dir,
         run_name=run_name,
@@ -211,18 +217,18 @@ def train(
         gradient_checkpointing_kwargs={"use_reentrant": False},
 
         # Optimiser
-        optim="paged_adamw_32bit",              # paged AdamW for QLoRA
+        optim="paged_adamw_32bit",              # offloads optimizer states to CPU RAM — saves ~4GB VRAM
         learning_rate=learning_rate,
         lr_scheduler_type="cosine",
         warmup_ratio=warmup_ratio,
         weight_decay=weight_decay,
         max_grad_norm=0.3,
 
-        # Precision
-        bf16=True,                              # bfloat16 mixed precision
+        # bfloat16 mixed precision — stable range on modern GPUs, no overflow issues
+        bf16=True,
         fp16=False,
 
-        # Sequence length — keep short for 8GB VRAM (no packing to avoid OOM)
+        # 512 tokens covers ~95% of our training samples; packing off to avoid OOM on 8GB
         max_length=max_seq_length,
         packing=False,
 
@@ -248,7 +254,7 @@ def train(
         seed=42,
     )
 
-    # ── Trainer ───────────────────────────────────────────────────────────────
+    # Trainer
     trainer = SFTTrainer(
         model=model,
         processing_class=tokenizer,
@@ -266,7 +272,7 @@ def train(
     # Resume from checkpoint if specified
     trainer.train(resume_from_checkpoint=resume_from)
 
-    # ── Save final adapter ────────────────────────────────────────────────────
+    # Save final adapter
     final_path = str(FINAL_MODELS / run_name)
     print(f"\nSaving final adapter -> {final_path}")
     trainer.model.save_pretrained(final_path)
@@ -275,13 +281,13 @@ def train(
     print("\nTraining complete!")
     print(f"  Checkpoint dir : {output_dir}")
     print(f"  Final adapter  : {final_path}")
-    print(f"\nTo run inference:")
+    print("\nTo run inference:")
     print(f"  python -m chatbot.inference --adapter {final_path} --build {build_filter or 'ORACLE'}")
 
     return trainer
 
 
-# ── CLI entry point ────────────────────────────────────────────────────────────
+# CLI entry point
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="LevelUp QLoRA fine-tuning")

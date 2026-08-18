@@ -1,21 +1,21 @@
 """
-api/routes/activity.py
-=======================
-Activity anomaly detection endpoint.
+XP cheating / anomaly detection endpoint.
+
+We train three ML classifiers (LR, Decision Tree, Random Forest) on synthetic
+activity logs to flag users who are grinding XP in unrealistic ways.
 
 POST /api/activity/check
-    Body  : ActivityLog (8 numeric features matching the training schema)
-    Return: AnomalyResult (is_anomaly, confidence, anomaly_type, per-model scores, latency)
+    Body   : ActivityLog (8 numeric features matching the training schema)
+    Returns: AnomalyResult (is_anomaly, confidence, anomaly_type, per-model scores, latency)
 
 GET /api/activity/health
-    Return: model load status and feature list
+    Returns: whether the anomaly models are loaded and which features they expect
 
 GET /api/activity/demo
-    Return: example predictions for each anomaly type (no model required, uses raw rules)
+    Returns: example predictions for all three anomaly types — useful for testing
 """
 
 import time
-from typing import Optional
 
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
@@ -23,7 +23,7 @@ from pydantic import BaseModel, Field
 router = APIRouter(prefix="/api/activity", tags=["activity"])
 
 
-# ── Schemas ───────────────────────────────────────────────────────────────────
+# Schemas
 
 class ActivityLog(BaseModel):
     """One day's aggregated activity statistics for a single user."""
@@ -49,28 +49,28 @@ class ActivityLog(BaseModel):
 
 
 class ModelScores(BaseModel):
-    logistic_regression: Optional[float] = Field(None, description="Anomaly probability from Logistic Regression")
-    decision_tree:       Optional[float] = Field(None, description="Anomaly probability from Decision Tree")
-    random_forest:       Optional[float] = Field(None, description="Anomaly probability from Random Forest")
+    logistic_regression: float | None = Field(None, description="Anomaly probability from Logistic Regression")
+    decision_tree:       float | None = Field(None, description="Anomaly probability from Decision Tree")
+    random_forest:       float | None = Field(None, description="Anomaly probability from Random Forest")
 
 
 class AnomalyResult(BaseModel):
     is_anomaly:   bool
     confidence:   float          = Field(description="Primary model's anomaly probability (0–1)")
-    anomaly_type: Optional[str]  = Field(None, description="xp_grinding | intensity_spoofing | impossible_streak | null")
+    anomaly_type: str | None  = Field(None, description="xp_grinding | intensity_spoofing | impossible_streak | null")
     scores:       ModelScores
     latency_ms:   float
 
 
-# ── Lazy detector loader ──────────────────────────────────────────────────────
+# Lazy detector loader
 
 _detector = None
 
 
 def _get_detector():
     """
-    Lazy-load the AnomalyDetector singleton.
-    Raises HTTP 503 if models have not been trained yet.
+    Load the AnomalyDetector on first use and reuse it afterward.
+    Returns HTTP 503 with a helpful message if the models haven't been trained yet.
     """
     global _detector
     if _detector is None:
@@ -94,7 +94,7 @@ def _get_detector():
     return _detector
 
 
-# ── Endpoints ─────────────────────────────────────────────────────────────────
+# Endpoints
 
 @router.post(
     "/check",

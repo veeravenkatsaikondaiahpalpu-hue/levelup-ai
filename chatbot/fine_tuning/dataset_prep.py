@@ -1,13 +1,13 @@
 """
-dataset_prep.py
-===============
-Load and format the LevelUp JSONL training data into a HuggingFace Dataset
-ready for SFTTrainer.
+Loads our JSONL training files and converts them into a HuggingFace Dataset
+that SFTTrainer can consume directly.
 
-Each JSONL sample has:  {"system": "...", "user": "...", "assistant": "..."}
+Each line in the JSONL looks like:
+    {"system": "You are TITAN...", "user": "How do I build muscle?", "assistant": "Progressive overload..."}
 
-We convert each to the LLaMA 3 instruct format via format_training_sample().
-The resulting Dataset has a single "text" column.
+We wrap each sample in the LLaMA 3 instruct chat template (via format_training_sample)
+so the model sees the exact same format at training time as at inference time.
+The resulting Dataset has a single "text" column containing the full formatted string.
 
 Usage:
     from chatbot.fine_tuning.dataset_prep import load_levelup_dataset
@@ -15,28 +15,27 @@ Usage:
 """
 
 import json
-import os
 import random
-from pathlib import Path
-from typing import Optional
-
-from datasets import Dataset
 
 # Allow running as a standalone script from project root
 import sys
+from pathlib import Path
+
+from datasets import Dataset
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from chatbot.prompt_template import format_training_sample, detect_build, FINETUNE_SYSTEM_PROMPTS
+from chatbot.prompt_template import FINETUNE_SYSTEM_PROMPTS, detect_build, format_training_sample
 
-# ── Paths ──────────────────────────────────────────────────────────────────────
+# Paths
 ROOT       = Path(__file__).resolve().parents[2]
 TRAIN_PATH = ROOT / "data" / "raw" / "finetune_train_v2.jsonl"
 VAL_PATH   = ROOT / "data" / "raw" / "finetune_val_v2.jsonl"
 
 
-# ── Loaders ────────────────────────────────────────────────────────────────────
+# Loaders
 
-def _load_jsonl(path: Path, build_filter: Optional[str] = None) -> list[dict]:
+def _load_jsonl(path: Path, build_filter: str | None = None) -> list[dict]:
     """Load a JSONL file, optionally filtering to a single build."""
     samples = []
     with open(path, encoding="utf-8") as f:
@@ -69,7 +68,9 @@ def _to_hf_dataset(samples: list[dict], shuffle: bool = True, seed: int = 42) ->
         assistant = s.get("assistant", "").strip()
         if not system or not user or not assistant:
             continue
-        # Normalise system prompts that use old/emoji variants to canonical ones
+        # Some early dataset samples used emoji-heavy or outdated system prompts.
+        # Re-map them to the canonical FINETUNE_SYSTEM_PROMPTS so all training
+        # samples use the same persona definition regardless of when they were created.
         build = detect_build(system)
         if build and build in FINETUNE_SYSTEM_PROMPTS:
             system = FINETUNE_SYSTEM_PROMPTS[build]
@@ -78,14 +79,14 @@ def _to_hf_dataset(samples: list[dict], shuffle: bool = True, seed: int = 42) ->
     return Dataset.from_dict({"text": texts})
 
 
-# ── Public API ─────────────────────────────────────────────────────────────────
+# Public API
 
 def load_levelup_dataset(
-    build_filter: Optional[str] = None,
+    build_filter: str | None = None,
     train_path: Path = TRAIN_PATH,
     val_path:   Path = VAL_PATH,
-    max_train_samples: Optional[int] = None,
-    max_val_samples:   Optional[int] = None,
+    max_train_samples: int | None = None,
+    max_val_samples:   int | None = None,
     seed: int = 42,
 ) -> tuple[Dataset, Dataset]:
     """
@@ -101,7 +102,7 @@ def load_levelup_dataset(
     Returns:
         (train_dataset, val_dataset) as HuggingFace Dataset objects
     """
-    print(f"Loading dataset ...")
+    print("Loading dataset ...")
     print(f"  Train: {train_path}")
     print(f"  Val  : {val_path}")
     if build_filter:
@@ -138,7 +139,7 @@ def get_build_counts(path: Path = TRAIN_PATH) -> dict[str, int]:
     return dict(counts)
 
 
-# ── Quick test ─────────────────────────────────────────────────────────────────
+# Quick test
 
 if __name__ == "__main__":
     print("=" * 55)

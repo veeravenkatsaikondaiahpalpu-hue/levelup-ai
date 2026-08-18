@@ -14,18 +14,16 @@ Rules:
 """
 
 from dataclasses import dataclass
-from typing import Optional
 
 from .builds import (
+    INTENSITY_MULTIPLIERS,
     BuildType,
     Intensity,
-    INTENSITY_MULTIPLIERS,
     get_xp_relevance_multiplier,
     is_primary_activity,
 )
 
-
-# ── Streak Milestones (day threshold, multiplier, display name) ───────────────
+# Streak Milestones (day threshold, multiplier, display name)
 
 STREAK_MILESTONES = [
     (60, 2.50, "Legendary Streak"),
@@ -37,7 +35,7 @@ STREAK_MILESTONES = [
 ]
 
 
-# ── Daily XP Cap by Level ─────────────────────────────────────────────────────
+# Daily XP Cap by Level
 
 DAILY_CAP_TIERS = [
     (21, 1_000),
@@ -46,7 +44,7 @@ DAILY_CAP_TIERS = [
 ]
 
 
-# ── Result Dataclass ──────────────────────────────────────────────────────────
+# Result Dataclass
 
 @dataclass
 class XPResult:
@@ -70,7 +68,7 @@ class XPResult:
     daily_xp_remaining:   int
 
     is_primary:           bool
-    power_up_name:        Optional[str]   # set when user just hit a new streak milestone
+    power_up_name:        str | None   # set when user just hit a new streak milestone
 
     def summary(self) -> str:
         """Human-readable summary for chatbot responses."""
@@ -92,9 +90,9 @@ class XPResult:
         return "\n".join(lines)
 
 
-# ── Core Functions ────────────────────────────────────────────────────────────
+# Core Functions
 
-def get_streak_multiplier(streak_days: int) -> tuple[float, Optional[str]]:
+def get_streak_multiplier(streak_days: int) -> tuple[float, str | None]:
     """
     Returns (multiplier, milestone_name).
     milestone_name is set only when streak_days exactly equals a threshold

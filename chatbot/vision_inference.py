@@ -1,6 +1,4 @@
 """
-vision_inference.py
-===================
 Multimodal image + text inference using Qwen2.5-VL-7B-Instruct.
 
 No fine-tuning needed — Qwen2.5-VL understands images out of the box.
@@ -25,14 +23,13 @@ import io
 import os
 import sys
 from pathlib import Path
-from typing import Optional, Union
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from chatbot.prompt_template import FINETUNE_SYSTEM_PROMPTS
 
-# ── Vision-specific system prompt additions ────────────────────────────────────
+# Vision-specific system prompt additions
 # Appended to each build's normal system prompt when an image is provided
 
 VISION_SUFFIX: dict[str, str] = {
@@ -73,13 +70,13 @@ VISION_SUFFIX: dict[str, str] = {
     ),
 }
 
-# ── Default model ──────────────────────────────────────────────────────────────
+# Default model
 DEFAULT_VLM = "Qwen/Qwen2.5-VL-7B-Instruct"
 
 
-# ── Helper: normalise image input to PIL ──────────────────────────────────────
+# Helper: normalise image input to PIL
 
-def _to_pil(image_input: Union[str, bytes, "Image.Image"]) -> "Image.Image":  # noqa: F821
+def _to_pil(image_input: str | bytes | Image.Image) -> Image.Image:  # noqa: F821
     """
     Accept a PIL Image, base64 string, raw bytes, or a file path.
     Always returns a PIL.Image.Image in RGB mode.
@@ -106,7 +103,7 @@ def _to_pil(image_input: Union[str, bytes, "Image.Image"]) -> "Image.Image":  # 
     raise TypeError(f"Unsupported image_input type: {type(image_input)}")
 
 
-# ── VisionChat class ───────────────────────────────────────────────────────────
+# VisionChat class
 
 class VisionChat:
     """
@@ -137,7 +134,7 @@ class VisionChat:
         self.processor   = None
         self._loaded     = False
 
-    # ── Loader ────────────────────────────────────────────────────────────────
+    # Loader
 
     def load(self):
         """Lazy-load Qwen2.5-VL (call once at server startup)."""
@@ -147,7 +144,7 @@ class VisionChat:
         print(f"\n[VisionChat] Loading {self.model_name} ...")
 
         import torch
-        from transformers import Qwen2_5_VLForConditionalGeneration, AutoProcessor
+        from transformers import AutoProcessor, Qwen2_5_VLForConditionalGeneration
 
         # 4-bit config
         bnb_config = None
@@ -180,14 +177,14 @@ class VisionChat:
         self._loaded = True
         print("[VisionChat] Vision model ready.\n")
 
-    # ── Core generation ───────────────────────────────────────────────────────
+    # Core generation
 
     def generate(
         self,
         build:        str,
         user_message: str,
-        image_input:  Optional[Union[str, bytes, "Image.Image"]] = None,  # noqa: F821
-        history:      Optional[list[dict]] = None,
+        image_input:  str | bytes | Image.Image | None = None,  # noqa: F821
+        history:      list[dict] | None = None,
         max_new_tokens: int   = 512,
         temperature:    float = 0.7,
         top_p:          float = 0.9,
@@ -217,7 +214,7 @@ class VisionChat:
         vision_add = VISION_SUFFIX.get(build, "") if image_input is not None else ""
         system = base_sys + vision_add
 
-        # ── Build messages list ────────────────────────────────────────────────
+        # Build messages list
         messages: list[dict] = [{"role": "system", "content": system}]
 
         # Prior history (text only — no images in history for simplicity)
@@ -237,7 +234,7 @@ class VisionChat:
 
         messages.append({"role": "user", "content": user_content})
 
-        # ── Tokenise using Qwen's chat template ───────────────────────────────
+        # Tokenise using Qwen's chat template
         text = self.processor.apply_chat_template(
             messages,
             tokenize=False,
@@ -256,7 +253,7 @@ class VisionChat:
             return_tensors="pt",
         ).to(self.model.device)
 
-        # ── Generate ──────────────────────────────────────────────────────────
+        # Generate
         with torch.no_grad():
             output_ids = self.model.generate(
                 **inputs,
@@ -272,11 +269,13 @@ class VisionChat:
         reply       = self.processor.decode(new_tokens, skip_special_tokens=True).strip()
         return reply
 
-    # ── Convenience ───────────────────────────────────────────────────────────
+    # Convenience
 
     def unload(self):
         """Free VRAM (call at shutdown)."""
-        import gc, torch
+        import gc
+
+        import torch
         if self.model is not None:
             del self.model
             self.model = None
@@ -290,9 +289,9 @@ class VisionChat:
         print("[VisionChat] Vision model unloaded.")
 
 
-# ── Singleton for FastAPI ──────────────────────────────────────────────────────
+# Singleton for FastAPI
 
-_vision_instance: Optional[VisionChat] = None
+_vision_instance: VisionChat | None = None
 
 
 def get_vision_model(

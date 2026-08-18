@@ -1,18 +1,18 @@
 """
-api/main.py
-===========
-FastAPI application entry point for LevelUp AI backend.
+FastAPI entry point for the LevelUp AI backend.
 
-Starts the fine-tuned chatbot model on startup and mounts all routers.
+On startup it loads the fine-tuned LoRA model (or falls back to Ollama if
+the GPU model can't load), then mounts all the route handlers.
 
 Run locally:
     uvicorn api.main:app --reload --port 8000
 
 Production:
     uvicorn api.main:app --host 0.0.0.0 --port 8000 --workers 1
-    (workers=1 because the GPU model is a singleton — do NOT fork)
+    Keep workers=1 — the GPU model is a singleton and can't be forked safely.
 """
 
+import logging
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -22,68 +22,83 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 
-# ── Config from environment ────────────────────────────────────────────────────
-ROOT          = Path(__file__).resolve().parent.parent
-ADAPTER_PATH  = os.getenv("LEVELUP_ADAPTER",    str(ROOT / "models" / "final" / "levelup-qlora-cloud"))
-BASE_MODEL    = os.getenv("LEVELUP_BASE_MODEL", "unsloth/Llama-3.2-3B-Instruct")
-LOAD_MODEL    = os.getenv("LEVELUP_LOAD_MODEL", "true").lower() == "true"
+from api.logging_config import setup_logging
 
-# Vision model — set LEVELUP_LOAD_VISION=true to load Qwen2.5-VL-7B at startup
-VISION_MODEL  = os.getenv("LEVELUP_VISION_MODEL", "Qwen/Qwen2.5-VL-7B-Instruct")
-LOAD_VISION   = os.getenv("LEVELUP_LOAD_VISION",  "false").lower() == "true"
+setup_logging()
+logger = logging.getLogger(__name__)
 
+# Read config from environment so we can swap models without touching code
+ROOT = Path(__file__).resolve().parent.parent
+ADAPTER_PATH = os.getenv("LEVELUP_ADAPTER", str(ROOT / "models" / "final" / "levelup-qlora-cloud"))
+BASE_MODEL = os.getenv("LEVELUP_BASE_MODEL", "unsloth/Llama-3.2-3B-Instruct")
+LOAD_MODEL = os.getenv("LEVELUP_LOAD_MODEL", "true").lower() == "true"
 
-# ── Lifespan: load model on startup ───────────────────────────────────────────
+# Vision model is off by default — it needs 14GB+ VRAM (Qwen2.5-VL-7B)
+VISION_MODEL = os.getenv("LEVELUP_VISION_MODEL", "Qwen/Qwen2.5-VL-7B-Instruct")
+LOAD_VISION = os.getenv("LEVELUP_LOAD_VISION", "false").lower() == "true"
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Load the LLM at startup; release on shutdown."""
     if LOAD_MODEL:
         try:
-            import sys
-            sys.path.insert(0, str(ROOT))
             from chatbot.inference import LevelUpChat
-            print(f"\n[LevelUp API] Loading model from {ADAPTER_PATH} ...")
+
+            logger.info("Loading LoRA model from %s", ADAPTER_PATH)
             model = LevelUpChat(adapter_path=ADAPTER_PATH, base_model=BASE_MODEL)
             model.load()
             app.state.chat_model = model
-            print("[LevelUp API] Model ready.\n")
-        except Exception as e:
-            print(f"[LevelUp API] WARNING: Could not load model: {e}")
-            print("[LevelUp API] Chat endpoint will return 503 until model is available.\n")
+            logger.info("LoRA model ready")
+        except Exception:
+            # Not fatal: we fall through to the Ollama backend below.
+            logger.warning("Could not load LoRA model", exc_info=True)
             app.state.chat_model = None
     else:
-        print("[LevelUp API] LEVELUP_LOAD_MODEL=false — skipping model load (dev mode)")
+        logger.info("LEVELUP_LOAD_MODEL=false - skipping LoRA model load")
         app.state.chat_model = None
 
-    # ── Load vision model (optional) ──────────────────────────────────────
+    # If the LoRA adapter failed (no GPU, no torch, etc.), try Ollama as a fallback
+    if app.state.chat_model is None:
+        try:
+            from chatbot.ollama_inference import get_ollama_model
+
+            ollama = get_ollama_model()
+            if ollama is not None:
+                app.state.chat_model = ollama
+                logger.info("Using Ollama (llama3.2) as local backend")
+            else:
+                logger.warning("Ollama not available - /api/chat will return 503")
+        except Exception:
+            logger.warning("Ollama fallback failed", exc_info=True)
+
     if LOAD_VISION:
         try:
             from chatbot.vision_inference import VisionChat
-            print(f"\n[LevelUp API] Loading vision model {VISION_MODEL} ...")
+
+            logger.info("Loading vision model %s", VISION_MODEL)
             vision = VisionChat(model_name=VISION_MODEL)
             vision.load()
             app.state.vision_model = vision
-            print("[LevelUp API] Vision model ready.\n")
-        except Exception as e:
-            print(f"[LevelUp API] WARNING: Could not load vision model: {e}")
+            logger.info("Vision model ready")
+        except Exception:
+            logger.warning("Could not load vision model", exc_info=True)
             app.state.vision_model = None
     else:
-        print("[LevelUp API] LEVELUP_LOAD_VISION=false — skipping vision model load")
+        logger.info("LEVELUP_LOAD_VISION=false - skipping vision model load")
         app.state.vision_model = None
 
     yield  # server is running
 
-    # Cleanup on shutdown
     if getattr(app.state, "chat_model", None):
         del app.state.chat_model
-        print("[LevelUp API] Model unloaded.")
+        logger.info("Model unloaded")
 
     if getattr(app.state, "vision_model", None):
         app.state.vision_model.unload()
 
 
-# ── App ────────────────────────────────────────────────────────────────────────
+# App
 
 app = FastAPI(
     title="LevelUp AI API",
@@ -95,23 +110,25 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Allow the React Native app to reach the API from any origin during development
+# Open CORS for now so the React Native app can reach the API during development.
+# Restrict allow_origins to specific domains before going to production.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],          # tighten to specific domains in production
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 
-# ── Routers ────────────────────────────────────────────────────────────────────
+# Routers
 
-from api.routes.chat      import router as chat_router
-from api.routes.vision    import router as vision_router
-from api.routes.activity  import router as activity_router
+from api.routes.activity import router as activity_router
+from api.routes.chat import router as chat_router
+from api.routes.profile import router as profile_router
 from api.routes.sentiment import router as sentiment_router
-from api.routes.profile   import router as profile_router
+from api.routes.vision import router as vision_router
+
 app.include_router(chat_router)
 app.include_router(vision_router)
 app.include_router(activity_router)
@@ -119,7 +136,7 @@ app.include_router(sentiment_router)
 app.include_router(profile_router)
 
 
-# ── Root endpoint ──────────────────────────────────────────────────────────────
+# Root endpoint
 
 @app.get("/")
 async def root():
@@ -235,7 +252,7 @@ async def speech_to_text(file: UploadFile = File(...)):
     503 if openai-whisper not installed.
     """
     try:
-        from voice.stt import transcribe_bytes_async, stt_available
+        from voice.stt import stt_available, transcribe_bytes_async
     except ImportError as e:
         raise HTTPException(status_code=500, detail=f"STT module error: {e}")
 
@@ -258,7 +275,7 @@ async def speech_to_text(file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=f"STT failed: {e}")
 
 
-# ── Dev server ─────────────────────────────────────────────────────────────────
+# Dev server
 
 if __name__ == "__main__":
     import uvicorn

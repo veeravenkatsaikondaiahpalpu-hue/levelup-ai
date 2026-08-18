@@ -1,6 +1,4 @@
 """
-spaces/backend/app.py
-=====================
 HuggingFace Spaces entry point for LevelUp AI backend.
 
 Runs as a Gradio Space (required for ZeroGPU support).
@@ -15,16 +13,18 @@ Environment variables (set in Space Settings → Secrets):
 """
 
 from __future__ import annotations
-import os, sys, json, tempfile
+
+import os
 from pathlib import Path
 
 import gradio as gr
-import spaces                          # HuggingFace ZeroGPU
-from fastapi import Request, UploadFile, File, HTTPException
-from fastapi.responses import JSONResponse, Response
+from fastapi import File, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse, Response
 
-# ── Config ────────────────────────────────────────────────────────────────────
+import spaces  # HuggingFace ZeroGPU
+
+# Config
 
 HF_TOKEN      = os.getenv("HF_TOKEN", "")
 ADAPTER_REPO  = os.getenv("LEVELUP_ADAPTER", "")   # e.g. "veera/levelup-qlora"
@@ -32,7 +32,7 @@ BASE_MODEL    = os.getenv("LEVELUP_BASE_MODEL", "unsloth/Llama-3.2-3B-Instruct")
 ELEVENLABS    = os.getenv("ELEVENLABS_API_KEY", "")
 WHISPER_SIZE  = os.getenv("WHISPER_MODEL", "base")
 
-# ── Model (lazy-loaded on first GPU call) ─────────────────────────────────────
+# Model (lazy-loaded on first GPU call)
 
 _chat_model = None
 
@@ -63,7 +63,7 @@ def _load_chat_model():
     return _chat_model
 
 
-# ── ZeroGPU inference ─────────────────────────────────────────────────────────
+# ZeroGPU inference
 
 @spaces.GPU(duration=60)
 def _run_inference(system_prompt: str, history: list[dict], user_msg: str) -> str:
@@ -93,7 +93,7 @@ def _run_inference(system_prompt: str, history: list[dict], user_msg: str) -> st
     return tokenizer.decode(new_tokens, skip_special_tokens=True).strip()
 
 
-# ── System prompts ────────────────────────────────────────────────────────────
+# System prompts
 
 BUILD_PROMPTS = {
     "TITAN":   "You are TITAN, an intense warrior strength coach. You speak with raw power and drive. Keep responses punchy and motivating. You help with lifting, nutrition, and physical training.",
@@ -106,7 +106,7 @@ BUILD_PROMPTS = {
 }
 
 
-# ── Anomaly & Sentiment (CPU — no GPU needed) ─────────────────────────────────
+# Anomaly & Sentiment (CPU — no GPU needed)
 
 def _load_anomaly_models():
     try:
@@ -131,7 +131,7 @@ _anomaly_lr, _anomaly_dt = _load_anomaly_models()
 _sentiment_model = _load_sentiment_model()
 
 
-# ── Gradio UI (minimal — just shows API info) ─────────────────────────────────
+# Gradio UI (minimal — just shows API info)
 
 with gr.Blocks(title="LevelUp AI — Backend API") as demo:
     gr.Markdown("""
@@ -172,7 +172,7 @@ Use the [Frontend Space](https://huggingface.co/spaces) to interact with the app
     test_btn.click(quick_chat, inputs=[build_dd, msg_box], outputs=reply_box)
 
 
-# ── CORS ──────────────────────────────────────────────────────────────────────
+# CORS
 
 demo.app.add_middleware(
     CORSMiddleware,
@@ -183,7 +183,7 @@ demo.app.add_middleware(
 )
 
 
-# ── /health ───────────────────────────────────────────────────────────────────
+# /health
 
 @demo.app.get("/health")
 async def health():
@@ -194,7 +194,7 @@ async def health():
     }
 
 
-# ── /api/chat ─────────────────────────────────────────────────────────────────
+# /api/chat
 
 @demo.app.post("/api/chat")
 async def chat_endpoint(request: Request):
@@ -214,7 +214,7 @@ async def chat_endpoint(request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# ── /api/activity/check ───────────────────────────────────────────────────────
+# /api/activity/check
 
 @demo.app.post("/api/activity/check")
 async def activity_check(request: Request):
@@ -234,7 +234,7 @@ async def activity_check(request: Request):
     })
 
 
-# ── /api/sentiment/analyze ────────────────────────────────────────────────────
+# /api/sentiment/analyze
 
 @demo.app.post("/api/sentiment/analyze")
 async def sentiment_endpoint(request: Request):
@@ -251,7 +251,7 @@ async def sentiment_endpoint(request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# ── /api/tts ─────────────────────────────────────────────────────────────────
+# /api/tts
 
 @demo.app.post("/api/tts")
 async def tts_endpoint(request: Request):
@@ -270,12 +270,12 @@ async def tts_endpoint(request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# ── /api/stt ─────────────────────────────────────────────────────────────────
+# /api/stt
 
 @demo.app.post("/api/stt")
 async def stt_endpoint(file: UploadFile = File(...)):
     try:
-        import whisper as _whisper   # noqa: F401
+        import whisper as _whisper  # noqa: F401
     except ImportError:
         raise HTTPException(status_code=503, detail="STT unavailable: openai-whisper not installed")
     audio_bytes = await file.read()
@@ -290,7 +290,7 @@ async def stt_endpoint(file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# ── Launch ────────────────────────────────────────────────────────────────────
+# Launch
 
 if __name__ == "__main__":
     demo.launch(server_name="0.0.0.0", server_port=7860)

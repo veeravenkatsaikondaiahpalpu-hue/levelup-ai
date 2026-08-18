@@ -1,6 +1,4 @@
 """
-sentiment/data_prep.py
-=======================
 Load, clean, and split the LevelUp sentiment dataset.
 
 The dataset is a JSONL file with one record per line:
@@ -16,21 +14,22 @@ and an oversampled training split for the rare "struggling" class.
 """
 
 import json
-import re
 import os
-import numpy as np
-from sklearn.model_selection import train_test_split
-from sklearn.feature_extraction.text import TfidfVectorizer
-import joblib
+import re
 
-# ── Label definitions ────────────────────────────────────────────────────────
+import joblib
+import numpy as np
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.model_selection import train_test_split
+
+# Label definitions
 
 LABELS      = ["neutral", "motivated", "struggling"]
 LABEL_TO_INT = {l: i for i, l in enumerate(LABELS)}
 INT_TO_LABEL = {i: l for l, i in LABEL_TO_INT.items()}
 
 
-# ── Text cleaning ─────────────────────────────────────────────────────────────
+# Text cleaning
 
 # Smart quotes, em dashes, ellipsis, etc. → plain ASCII
 _CLEAN_MAP = str.maketrans({
@@ -54,7 +53,7 @@ def clean_text(text: str) -> str:
     return text
 
 
-# ── Dataset loader ────────────────────────────────────────────────────────────
+# Dataset loader
 
 def load_jsonl(path: str) -> tuple[list[str], np.ndarray]:
     """
@@ -77,7 +76,7 @@ def load_jsonl(path: str) -> tuple[list[str], np.ndarray]:
     return texts, np.array(labels, dtype=np.int32)
 
 
-# ── Train / test split ────────────────────────────────────────────────────────
+# Train / test split
 
 def split(
     texts: list[str],
@@ -94,7 +93,7 @@ def split(
     )
 
 
-# ── TF-IDF vectoriser ─────────────────────────────────────────────────────────
+# TF-IDF vectoriser
 
 def fit_vectorizer(
     texts: list[str],
@@ -136,7 +135,7 @@ def load_vectorizer(path: str) -> TfidfVectorizer:
     return joblib.load(path)
 
 
-# ── Dual TF-IDF (word + character n-grams) ───────────────────────────────────
+# Dual TF-IDF (word + character n-grams)
 
 class DualVectorizer:
     """
@@ -216,7 +215,6 @@ def fit_dual_vectorizer(
 
     # We fit-transform then drop the result (caller will call transform)
     # but we need the vectorisers fitted, so:
-    from scipy.sparse import hstack
     dv.word_vec.fit(texts)
     dv.char_vec.fit(texts)
 
@@ -225,7 +223,7 @@ def fit_dual_vectorizer(
     return dv
 
 
-# ── Augmentation for rare "struggling" class ──────────────────────────────────
+# Augmentation for rare "struggling" class
 
 def oversample_minority(
     texts: list[str],

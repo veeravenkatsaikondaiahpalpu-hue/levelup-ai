@@ -1,5 +1,4 @@
 """
-save_raw_datasets.py
 Downloads and saves every dataset used in the LevelUp pipeline as raw CSV files
 into data/raw/datasets/<name>.csv — so the original source data is visible in
 the project folder.
@@ -11,10 +10,10 @@ Run from project root:
     PYTHONPATH=. venv/Scripts/python.exe data/save_raw_datasets.py
 """
 
-import os
 import csv
-import sys
 import json
+import os
+import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -52,7 +51,7 @@ def save_jsonl(name, rows):
     return path
 
 
-# ── 1. HealthCareMagic ────────────────────────────────────────────────────────
+# 1. HealthCareMagic
 def save_healthcare_magic(cap=5000):
     ds = _try_load("lavita/ChatDoctor-HealthCareMagic-100k", streaming=True)
     if not ds: return
@@ -66,7 +65,7 @@ def save_healthcare_magic(cap=5000):
     save_csv("01_healthcare_magic", rows, ["input", "output"])
 
 
-# ── 2. MentalChat16K ─────────────────────────────────────────────────────────
+# 2. MentalChat16K
 def save_mentalchat():
     ds = _try_load("ShenLab/MentalChat16K")
     if not ds: return
@@ -76,7 +75,7 @@ def save_mentalchat():
     save_csv("02_mentalchat16k", rows, ["Context", "Response"])
 
 
-# ── 3. Fitness Q&A ────────────────────────────────────────────────────────────
+# 3. Fitness Q&A
 def save_fitness_qa():
     ds = _try_load("its-myrto/fitness-question-answers")
     if not ds: return
@@ -89,7 +88,7 @@ def save_fitness_qa():
     save_csv("03_fitness_qa", rows, fields)
 
 
-# ── 4. Fitness Chat ───────────────────────────────────────────────────────────
+# 4. Fitness Chat
 def save_fitness_chat():
     ds = _try_load("chibbss/fitness-chat-prompt-completion-dataset")
     if not ds: return
@@ -101,7 +100,7 @@ def save_fitness_chat():
     save_csv("04_fitness_chat", rows, fields)
 
 
-# ── 5. Mental Health Counseling ───────────────────────────────────────────────
+# 5. Mental Health Counseling
 def save_mental_counseling(cap=5000):
     ds = _try_load("Amod/mental_health_counseling_conversations")
     if not ds: return
@@ -115,7 +114,7 @@ def save_mental_counseling(cap=5000):
     save_csv("05_mental_health_counseling", rows, ["Context", "Response"])
 
 
-# ── 6. NPC Dialogue ───────────────────────────────────────────────────────────
+# 6. NPC Dialogue
 def save_npc_dialogue():
     ds = _try_load("amaydle/npc-dialogue")
     if not ds: return
@@ -127,7 +126,7 @@ def save_npc_dialogue():
     save_csv("06_npc_dialogue", rows, fields)
 
 
-# ── 7. GYM Exercise ───────────────────────────────────────────────────────────
+# 7. GYM Exercise
 def save_gym_exercise():
     ds = _try_load("onurSakar/GYM-Exercise")
     if not ds: return
@@ -135,7 +134,7 @@ def save_gym_exercise():
     save_csv("07_gym_exercise", rows, ["text"])
 
 
-# ── 8. Fitness Q&A Large ─────────────────────────────────────────────────────
+# 8. Fitness Q&A Large
 def save_fitness_qa_large(cap=10000):
     ds = _try_load("hammamwahab/fitness-qa")
     if not ds: return
@@ -150,7 +149,7 @@ def save_fitness_qa_large(cap=10000):
     save_csv("08_fitness_qa_large", rows, ["context", "question", "answer"])
 
 
-# ── 9. Motivational Interviewing ─────────────────────────────────────────────
+# 9. Motivational Interviewing
 def save_motivational_interviewing():
     ds = _try_load("to-be/annomi-motivational-interviewing-therapy-conversations")
     if not ds: return
@@ -163,7 +162,7 @@ def save_motivational_interviewing():
     save_csv("09_motivational_interviewing", rows, ["id", "conversations"])
 
 
-# ── 10. D&D CRD3 ─────────────────────────────────────────────────────────────
+# 10. D&D CRD3
 def save_dnd_crd3():
     print("  [INFO] microsoft/crd3 uses deprecated HF scripts — skipping raw save.")
     # Write a placeholder note file instead
@@ -182,12 +181,15 @@ def save_dnd_crd3():
     print(f"  Note saved -> {note_path}")
 
 
-# ── 11-15. Build-Specific Handcrafted Q&A ────────────────────────────────────
+# 11-15. Build-Specific Handcrafted Q&A
 def save_handcrafted_qa():
     """Save all 5 handcrafted build Q&A sets as a single CSV."""
     from data.preprocess import (
-        INTELLIGENCE_QA, DEXTERITY_QA, CREATIVE_QA,
-        ENTREPRENEUR_QA, GAMER_QA
+        CREATIVE_QA,
+        DEXTERITY_QA,
+        ENTREPRENEUR_QA,
+        GAMER_QA,
+        INTELLIGENCE_QA,
     )
     rows = []
     for build, pairs in [
@@ -202,7 +204,7 @@ def save_handcrafted_qa():
     save_csv("11_15_handcrafted_build_qa", rows, ["build", "question", "answer"])
 
 
-# ── 16. Education High School Students ───────────────────────────────────────
+# 16. Education High School Students
 def save_education_hf(cap=5000):
     ds = _try_load("ajibawa-2023/Education-High-School-Students")
     if not ds: return
@@ -217,7 +219,7 @@ def save_education_hf(cap=5000):
     save_csv("16_education_high_school", rows, ["prompt", "text", "text_token_length"])
 
 
-# ── 17. Socratic Conversations ────────────────────────────────────────────────
+# 17. Socratic Conversations
 def save_socratic_conversations():
     ds = _try_load("sanjaypantdsd/socratic-method-conversations")
     if not ds: return
@@ -230,7 +232,7 @@ def save_socratic_conversations():
     save_csv("17_socratic_conversations", rows, ["user", "assistant"])
 
 
-# ── 18. Writing Prompts ───────────────────────────────────────────────────────
+# 18. Writing Prompts
 def save_writing_prompts(cap=5000):
     ds = _try_load("euclaise/writingprompts")
     if not ds: return
@@ -244,7 +246,7 @@ def save_writing_prompts(cap=5000):
     save_csv("18_writing_prompts", rows, ["prompt", "story"])
 
 
-# ── 19. Startup Interviews (YC) ──────────────────────────────────────────────
+# 19. Startup Interviews (YC)
 def save_startup_interviews():
     ds = _try_load("Glavin001/startup-interviews")
     if not ds: return
@@ -256,7 +258,7 @@ def save_startup_interviews():
     save_csv("19_startup_interviews_yc", rows, fields)
 
 
-# ── 20. Sales Conversations ───────────────────────────────────────────────────
+# 20. Sales Conversations
 def save_sales_conversations(cap=5000):
     ds = _try_load("goendalf666/sales-conversations-instruction-base")
     if not ds: return
@@ -267,7 +269,7 @@ def save_sales_conversations(cap=5000):
     save_csv("20_sales_conversations", rows, ["conversation"])
 
 
-# ── 21. Dota2 Instruct ────────────────────────────────────────────────────────
+# 21. Dota2 Instruct
 def save_dota2_instruct():
     ds = _try_load("Aiden07/dota2_instruct_prompt")
     if not ds: return
@@ -279,7 +281,7 @@ def save_dota2_instruct():
     save_csv("21_dota2_instruct", rows, fields)
 
 
-# ── 22. English Quotes (Sentiment) ───────────────────────────────────────────
+# 22. English Quotes (Sentiment)
 def save_english_quotes():
     ds = _try_load("Abirate/english_quotes")
     if not ds: return
@@ -291,7 +293,7 @@ def save_english_quotes():
     save_csv("22_english_quotes_sentiment", rows, fields)
 
 
-# ── 23. Synthetic Anomaly Dataset ────────────────────────────────────────────
+# 23. Synthetic Anomaly Dataset
 def save_anomaly_dataset():
     """Already generated — just copy/reference the existing file."""
     src  = os.path.join("data", "raw", "anomaly_logs.csv")
@@ -306,7 +308,7 @@ def save_anomaly_dataset():
         print(f"  [WARN] {src} not found — run generate_anomaly_data.py first")
 
 
-# ── Manifest ──────────────────────────────────────────────────────────────────
+# Manifest
 def write_manifest(results):
     path = os.path.join(OUT_DIR, "00_MANIFEST.txt")
     with open(path, "w", encoding="utf-8") as f:
@@ -323,7 +325,7 @@ def write_manifest(results):
     print(f"\n  Manifest saved -> {path}")
 
 
-# ── Main ──────────────────────────────────────────────────────────────────────
+# Main
 if __name__ == "__main__":
     print("=" * 60)
     print("LevelUp AI — Saving Raw Datasets")

@@ -6,30 +6,28 @@ about a user. It gets serialized to the database and injected into the LLM syste
 prompt on every request.
 """
 
+import json
 from dataclasses import dataclass, field
 from datetime import date, datetime
-from typing import Optional
-import json
 
 from .builds import (
-    BuildType,
     BADGE_XP_THRESHOLDS,
-    BADGE_TIERS,
     LEGENDARY_BADGE_INDEX,
+    BuildType,
+    calculate_level,
     get_badge_index_for_xp,
     get_badge_name,
-    calculate_level,
 )
-from .xp_calculator import get_streak_multiplier, get_daily_cap
 from .gamer_mechanics import (
-    calculate_gamer_xp,
-    get_gamer_daily_cap,
-    is_boss_day as gamer_is_boss_day,
     GAMER_OVERTIME_LIMIT,
+    get_gamer_daily_cap,
 )
+from .gamer_mechanics import (
+    is_boss_day as gamer_is_boss_day,
+)
+from .xp_calculator import get_daily_cap, get_streak_multiplier
 
-
-# ── Activity Log ──────────────────────────────────────────────────────────────
+# Activity Log
 
 @dataclass
 class ActivityLog:
@@ -49,7 +47,7 @@ class ActivityLog:
         }
 
 
-# ── Build Profile ─────────────────────────────────────────────────────────────
+# Build Profile
 
 @dataclass
 class BuildProfile:
@@ -66,15 +64,15 @@ class BuildProfile:
         return get_badge_index_for_xp(self.total_xp)
 
     @property
-    def badge_name(self) -> Optional[str]:
+    def badge_name(self) -> str | None:
         return get_badge_name(self.build_type, self.badge_index)
 
     @property
-    def next_badge_name(self) -> Optional[str]:
+    def next_badge_name(self) -> str | None:
         return get_badge_name(self.build_type, self.badge_index + 1)
 
     @property
-    def xp_to_next_badge(self) -> Optional[int]:
+    def xp_to_next_badge(self) -> int | None:
         next_idx = self.badge_index + 1
         if next_idx >= len(BADGE_XP_THRESHOLDS):
             return None
@@ -97,7 +95,7 @@ class BuildProfile:
         """True if the user has reached the Legendary badge — unlocks new build slot."""
         return self.badge_index >= LEGENDARY_BADGE_INDEX
 
-    def add_xp(self, amount: int) -> Optional[str]:
+    def add_xp(self, amount: int) -> str | None:
         """
         Add XP to this build profile.
         Returns the new badge name if a badge was just earned, else None.
@@ -123,20 +121,20 @@ class BuildProfile:
         }
 
 
-# ── User State ────────────────────────────────────────────────────────────────
+# User State
 
 @dataclass
 class UserState:
     user_id:        str
     username:       str
     primary_build:  BuildProfile
-    secondary_build: Optional[BuildProfile] = None
+    secondary_build: BuildProfile | None = None
     legacy_builds:  list = field(default_factory=list)  # list[BuildProfile]
 
     # Streak
     current_streak:      int            = 0
     longest_streak:      int            = 0
-    last_activity_date:  Optional[str]  = None  # ISO date string
+    last_activity_date:  str | None  = None  # ISO date string
 
     # Daily XP (resets at 12:00 AM)
     daily_xp_today:   int  = 0
@@ -151,7 +149,7 @@ class UserState:
     shields_reset_month: int = field(default_factory=lambda: date.today().month)
 
 
-    # ── Internal Helpers ──────────────────────────────────────────────────────
+    # Internal Helpers
 
     def _reset_daily_xp_if_needed(self):
         today = date.today().isoformat()
@@ -168,9 +166,9 @@ class UserState:
             self.shields_reset_month = current_month
 
 
-    # ── Streak Management ─────────────────────────────────────────────────────
+    # Streak Management
 
-    def update_streak(self, activity_date: Optional[date] = None) -> dict:
+    def update_streak(self, activity_date: date | None = None) -> dict:
         """
         Update streak for today's activity.
         Returns a status dict the chatbot uses to generate messages.
@@ -221,7 +219,7 @@ class UserState:
         return result
 
 
-    # ── XP Management ────────────────────────────────────────────────────────
+    # XP Management
 
     def add_xp(self, amount: int, to_secondary: bool = False) -> dict:
         """
@@ -261,7 +259,7 @@ class UserState:
         }
 
 
-    # ── Build Switching ───────────────────────────────────────────────────────
+    # Build Switching
 
     def can_switch_build(self) -> bool:
         """User can unlock a new build only after reaching Legendary on primary."""
@@ -303,7 +301,7 @@ class UserState:
         return {"success": True, "secondary_build": new_build_type.value}
 
 
-    # ── Context for Chatbot ───────────────────────────────────────────────────
+    # Context for Chatbot
 
     def to_context_dict(self, recent_logs: list = None) -> dict:
         """

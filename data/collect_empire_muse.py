@@ -1,6 +1,4 @@
 """
-collect_empire_muse.py
-======================
 Boosts training data for two underrepresented builds:
 
   EMPIRE  (Entrepreneur)  -- 1,851 samples  -> target +2,000 more
@@ -19,7 +17,13 @@ Run:
     PYTHONPATH=. venv/Scripts/python.exe data/collect_empire_muse.py
 """
 
-import os, json, csv, time, html, re, requests
+import html
+import json
+import os
+import re
+import time
+
+import requests
 from datasets import load_dataset
 
 OUT_DIR = os.path.join("data", "raw", "missing_builds")
@@ -27,7 +31,7 @@ os.makedirs(OUT_DIR, exist_ok=True)
 
 HEADERS = {"User-Agent": "LevelUpAI/1.0 SRH-Stuttgart research (student)"}
 
-# ── System prompts ────────────────────────────────────────────────────────────
+# System prompts
 
 EMPIRE_SYSTEM = (
     "You are EMPIRE, the AI companion for LevelUp's ENTREPRENEUR build — an RPG "
@@ -47,7 +51,7 @@ MUSE_SYSTEM = (
     "Help the user unlock their creative voice and make things that matter."
 )
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
+# Helpers
 
 def clean(text):
     if not text: return ""
@@ -141,9 +145,7 @@ def save_jsonl(path, samples):
     print(f"  Saved {len(samples):,} samples -> {path}")
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 # EMPIRE — Entrepreneur build
-# ═══════════════════════════════════════════════════════════════════════════════
 
 def collect_empire():
     print("\n" + "="*60)
@@ -242,9 +244,7 @@ def collect_empire():
     return samples
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 # MUSE — Creative build
-# ═══════════════════════════════════════════════════════════════════════════════
 
 def collect_muse():
     print("\n" + "="*60)
@@ -343,7 +343,7 @@ def collect_muse():
     return samples
 
 
-# ── Main ──────────────────────────────────────────────────────────────────────
+# Main
 
 if __name__ == "__main__":
     print("=" * 60)

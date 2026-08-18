@@ -1,5 +1,4 @@
 """
-download_reddit_datasets.py
 Downloads subreddit Q&A data using Reddit's public JSON API (no credentials needed).
 Saves one CSV per subreddit into data/raw/staging/reddit/
 Each file contains top-scored post + best reply pairs, raw and unprocessed.
@@ -10,12 +9,12 @@ Run:
     PYTHONPATH=. venv/Scripts/python.exe data/download_reddit_datasets.py
 """
 
-import os
 import csv
-import json
-import time
 import html
+import os
 import re
+import time
+
 import requests
 
 STAGING = os.path.join("data", "raw", "staging", "reddit")
@@ -182,7 +181,7 @@ def save_csv(build: str, subreddit: str, pairs: list):
     return path
 
 
-# ── Main ──────────────────────────────────────────────────────────────────────
+# Main
 if __name__ == "__main__":
     print("=" * 60)
     print("LevelUp AI -- Downloading Reddit Subreddit Data")

@@ -1,5 +1,4 @@
 """
-download_github_datasets.py
 Downloads the top 3 research datasets from GitHub into data/raw/staging/github/
 These are saved RAW for inspection — NOT added to the fine-tuning pipeline yet.
 
@@ -12,13 +11,13 @@ Run:
     PYTHONPATH=. venv/Scripts/python.exe data/download_github_datasets.py
 """
 
-import os
-import json
 import csv
-import zipfile
-import tarfile
-import requests
+import json
+import os
 import shutil
+import zipfile
+
+import requests
 
 STAGING = os.path.join("data", "raw", "staging", "github")
 os.makedirs(STAGING, exist_ok=True)
@@ -41,11 +40,9 @@ def download_file(url, dest_path, desc=""):
     return dest_path
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 # 1. CIMA — Tutoring Dialogues (ACL 2020)
 #    https://github.com/kstats/CIMA
 #    Format: JSON files with multi-turn tutor-student sessions
-# ═══════════════════════════════════════════════════════════════════════════════
 
 def download_cima():
     out_dir = os.path.join(STAGING, "01_cima_tutoring")
@@ -121,11 +118,9 @@ def download_cima():
     print(f"  Full repo          : {extract_dir}")
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 # 2. MathDial — Teacher Scaffolding Dialogue (EMNLP 2023)
 #    https://github.com/eth-nlped/mathdial
 #    Format: CSV files (train.csv, test.csv) — ready to use
-# ═══════════════════════════════════════════════════════════════════════════════
 
 def download_mathdial():
     out_dir = os.path.join(STAGING, "02_mathdial_tutoring")
@@ -175,7 +170,7 @@ def download_mathdial():
                     cols = reader.fieldnames
                     row1 = next(reader)
                 print(f"\n  Columns: {cols}")
-                print(f"  Sample row:")
+                print("  Sample row:")
                 for k, v in row1.items():
                     print(f"    {k}: {str(v)[:100]}")
             except Exception as e:
@@ -185,13 +180,11 @@ def download_mathdial():
     print(f"  Full repo: {extract_dir}")
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 # 3. FIREBALL — Real D&D Sessions from Discord (ACL 2023)
 #    https://github.com/zhudotexe/FIREBALL
 #    Format: JSONL — game state + dialogue turns
 #    Note: Full dataset is ~25k sessions hosted via Zenodo/HF.
 #          We download the sample/dev split first for inspection.
-# ═══════════════════════════════════════════════════════════════════════════════
 
 def download_fireball():
     out_dir = os.path.join(STAGING, "03_fireball_dnd")
@@ -268,9 +261,7 @@ def download_fireball():
     print(f"  Full repo + scripts: {extract_dir}")
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 # Also grab CRD3 directly from GitHub (bypasses the HF deprecated script issue)
-# ═══════════════════════════════════════════════════════════════════════════════
 
 def download_crd3_github():
     out_dir = os.path.join(STAGING, "04_crd3_critical_role")
@@ -328,7 +319,7 @@ def download_crd3_github():
     print(f"  Full repo: {extract_dir}")
 
 
-# ── Main ──────────────────────────────────────────────────────────────────────
+# Main
 if __name__ == "__main__":
     print("=" * 60)
     print("LevelUp AI — Downloading GitHub Research Datasets")

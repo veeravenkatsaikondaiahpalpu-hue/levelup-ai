@@ -1,14 +1,15 @@
 """
-kaggle_train.py
-===============
-LevelUp QLoRA fine-tuning — optimised for Kaggle P100 (16GB VRAM).
+LevelUp QLoRA fine-tuning — set up and tested on a Kaggle P100 (16GB VRAM).
 
-Paste this entire file into a Kaggle notebook code cell and run.
+Paste this entire file into a Kaggle notebook code cell and hit Run All.
+Before running, upload your JSONL files as a Kaggle dataset named "levelup-finetune-data".
 Dataset input path: /kaggle/input/levelup-finetune-data/
 """
 
-# ── Step 1: Install dependencies ──────────────────────────────────────────────
-import subprocess, sys
+# Step 1: Install dependencies
+import subprocess
+import sys
+
 
 def pip(pkg):
     subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", pkg])
@@ -23,9 +24,10 @@ pip("huggingface_hub")
 
 print("✅ Packages installed")
 
-# ── Step 2: Imports ────────────────────────────────────────────────────────────
-import os, json, torch
-from pathlib import Path
+# Step 2: Imports
+import json
+
+import torch
 from datasets import Dataset
 from peft import LoraConfig, TaskType, get_peft_model, prepare_model_for_kbit_training
 from transformers import (
@@ -33,40 +35,40 @@ from transformers import (
     AutoTokenizer,
     BitsAndBytesConfig,
 )
-from trl import SFTTrainer, SFTConfig
+from trl import SFTConfig, SFTTrainer
 
 print(f"✅ PyTorch {torch.__version__} | CUDA: {torch.cuda.is_available()}")
 print(f"   GPU: {torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'None'}")
 print(f"   VRAM: {torch.cuda.get_device_properties(0).total_memory / 1e9:.1f} GB")
 
-# ── Step 3: Config ─────────────────────────────────────────────────────────────
+# Step 3: Config
 MODEL_NAME   = "unsloth/Llama-3.2-3B-Instruct"
-HF_TOKEN     = ""   # ← paste your HF token here if needed: "hf_xxxx"
+HF_TOKEN     = ""   # paste your HuggingFace token here if the model requires gated access: "hf_xxxx"
 
 TRAIN_FILE   = "/kaggle/input/levelup-finetune-data/finetune_train_v2.jsonl"
 VAL_FILE     = "/kaggle/input/levelup-finetune-data/finetune_val_v2.jsonl"
 OUTPUT_DIR   = "/kaggle/working/levelup-qlora-checkpoints"
 FINAL_DIR    = "/kaggle/working/levelup-qlora-final"
 
-# P100 16GB optimised settings
-BATCH_SIZE      = 2       # P100 has 16GB — can do batch=2 comfortably
-GRAD_ACCUM      = 8       # effective batch = 16
+# P100 has 16GB VRAM so we can afford batch=2 — keeps effective batch at 16 with grad_accum=8
+BATCH_SIZE      = 2
+GRAD_ACCUM      = 8       # effective batch = BATCH_SIZE * GRAD_ACCUM = 16
 MAX_LENGTH      = 512
 NUM_EPOCHS      = 3
 LEARNING_RATE   = 2e-4
 LORA_R          = 16
 LORA_ALPHA      = 32
 
-# ── Step 4: Login to HuggingFace (optional) ────────────────────────────────────
+# Step 4: Login to HuggingFace (optional)
 if HF_TOKEN:
     from huggingface_hub import login
     login(token=HF_TOKEN, add_to_git_credential=False)
     print("✅ HuggingFace logged in")
 
-# ── Step 5: Load Dataset ───────────────────────────────────────────────────────
+# Step 5: Load Dataset
 def load_jsonl(path):
     samples = []
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         for line in f:
             line = line.strip()
             if line:
@@ -83,7 +85,7 @@ val_ds   = Dataset.from_list(val_samples)
 print(f"  Train: {len(train_ds):,} samples")
 print(f"  Val  : {len(val_ds):,} samples")
 
-# ── Step 6: Load Model + Tokenizer ─────────────────────────────────────────────
+# Step 6: Load Model + Tokenizer
 print(f"\nLoading model: {MODEL_NAME}")
 
 bnb_config = BitsAndBytesConfig(
@@ -114,7 +116,7 @@ if tokenizer.pad_token is None:
     tokenizer.pad_token_id = tokenizer.eos_token_id
 tokenizer.padding_side = "right"
 
-# ── Step 7: Apply LoRA ─────────────────────────────────────────────────────────
+# Step 7: Apply LoRA
 lora_config = LoraConfig(
     r=LORA_R,
     lora_alpha=LORA_ALPHA,
@@ -127,7 +129,7 @@ lora_config = LoraConfig(
 model = get_peft_model(model, lora_config)
 model.print_trainable_parameters()
 
-# ── Step 8: Training Config ────────────────────────────────────────────────────
+# Step 8: Training Config
 sft_config = SFTConfig(
     output_dir=OUTPUT_DIR,
     run_name="levelup-qlora-kaggle",
@@ -169,7 +171,7 @@ sft_config = SFTConfig(
     seed=42,
 )
 
-# ── Step 9: Train ──────────────────────────────────────────────────────────────
+# Step 9: Train
 trainer = SFTTrainer(
     model=model,
     processing_class=tokenizer,
@@ -178,7 +180,7 @@ trainer = SFTTrainer(
     args=sft_config,
 )
 
-print(f"\n🚀 Starting training...")
+print("\n🚀 Starting training...")
 print(f"   Effective batch size : {BATCH_SIZE * GRAD_ACCUM}")
 print(f"   Train samples        : {len(train_ds):,}")
 print(f"   Val samples          : {len(val_ds):,}")
@@ -186,12 +188,12 @@ print(f"   Output               : {OUTPUT_DIR}")
 
 trainer.train()
 
-# ── Step 10: Save Final Adapter ────────────────────────────────────────────────
+# Step 10: Save Final Adapter
 print(f"\n💾 Saving final adapter -> {FINAL_DIR}")
 trainer.model.save_pretrained(FINAL_DIR)
 tokenizer.save_pretrained(FINAL_DIR)
 
 print("\n✅ Training complete!")
 print(f"   Adapter saved to: {FINAL_DIR}")
-print(f"\n📥 Download your adapter:")
-print(f"   Go to Kaggle Output tab → download 'levelup-qlora-final' folder")
+print("\n📥 Download your adapter:")
+print("   Go to Kaggle Output tab → download 'levelup-qlora-final' folder")

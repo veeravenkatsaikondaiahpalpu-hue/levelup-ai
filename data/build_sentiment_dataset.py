@@ -1,6 +1,4 @@
 """
-data/build_sentiment_dataset.py
-================================
 Merge all collected sentiment/emotion/mental-health datasets into a
 single unified 3-class JSONL file for training the LevelUp sentiment classifier.
 
@@ -58,7 +56,7 @@ ROOT    = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT_DIR = os.path.join(ROOT, "data", "raw")
 EXTRA   = os.path.join(ROOT, "data", "raw", "sentiment_extra")
 
-# ── Label maps ────────────────────────────────────────────────────────────────
+# Label maps
 
 DAIR_MAP = {
     "sadness":  "struggling",
@@ -79,7 +77,7 @@ GO_MOTIVATED = {
 }
 
 
-# ── Source loaders ────────────────────────────────────────────────────────────
+# Source loaders
 
 def load_original(path: str) -> list[dict]:
     rows = []
@@ -161,7 +159,7 @@ def load_mentalchat(path: str) -> list[dict]:
     return rows
 
 
-# ── Balancer ──────────────────────────────────────────────────────────────────
+# Balancer
 
 def balance(rows: list[dict], target_per_class: int = 8000) -> list[dict]:
     """
@@ -183,7 +181,7 @@ def balance(rows: list[dict], target_per_class: int = 8000) -> list[dict]:
     return balanced
 
 
-# ── Main ──────────────────────────────────────────────────────────────────────
+# Main
 
 def build(
     target_per_class: int = 8000,
@@ -254,5 +252,5 @@ if __name__ == "__main__":
     print("  LevelUp Sentiment Dataset Builder")
     print("=" * 60)
     path = build(target_per_class=8000)
-    print(f"\nDone. Use this file for training:")
+    print("\nDone. Use this file for training:")
     print(f"  python -m sentiment.train --data {path}")

@@ -2,8 +2,8 @@
 chat_test.py — Quick interactive test for the LevelUp API
 Run: python chat_test.py
 """
+
 import requests
-import json
 
 API = "http://localhost:8001/api/chat"
 BUILDS = ["TITAN", "ORACLE", "PHANTOM", "SAGE", "MUSE", "EMPIRE", "GG"]

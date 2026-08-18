@@ -1,6 +1,4 @@
 """
-anomaly_detection/models.py
-============================
 Train and serve three anomaly detectors on the LevelUp activity log dataset:
   • Logistic Regression (interpretable baseline)
   • Decision Tree       (rule-based, visualisable)
@@ -21,20 +19,21 @@ Inference
 """
 
 import os
-import numpy as np
-import joblib
 
-from sklearn.linear_model  import LogisticRegression
-from sklearn.tree          import DecisionTreeClassifier
-from sklearn.ensemble      import RandomForestClassifier
+import joblib
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score, classification_report
 from sklearn.preprocessing import StandardScaler
-from sklearn.metrics       import accuracy_score, classification_report
+from sklearn.tree import DecisionTreeClassifier
 
 from anomaly_detection.data_prep import (
-    load_csv, fit_scaler, features_from_dict, INT_TO_TYPE,
+    features_from_dict,
+    fit_scaler,
+    load_csv,
 )
 
-# ── Paths ─────────────────────────────────────────────────────────────────────
+# Paths
 
 ROOT      = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MODEL_DIR = os.path.join(ROOT, "models", "anomaly")
@@ -45,7 +44,7 @@ DT_PATH     = os.path.join(MODEL_DIR, "decision_tree.joblib")
 RF_PATH     = os.path.join(MODEL_DIR, "random_forest.joblib")
 
 
-# ── Training ──────────────────────────────────────────────────────────────────
+# Training
 
 def train(
     train_csv: str,
@@ -66,19 +65,19 @@ def train(
     """
     os.makedirs(model_dir, exist_ok=True)
 
-    # ── Load data ──────────────────────────────────────────────────────────
+    # Load data
     print("  Loading data ...")
     X_train, y_train, _ = load_csv(train_csv)
     X_test,  y_test,  _ = load_csv(test_csv)
     print(f"  Train: {X_train.shape[0]:,} rows  |  Test: {X_test.shape[0]:,} rows")
 
-    # ── Scaler ─────────────────────────────────────────────────────────────
+    # Scaler
     print("  Fitting StandardScaler ...")
     scaler     = fit_scaler(X_train, save_path=os.path.join(model_dir, "scaler.joblib"))
     X_train_s  = scaler.transform(X_train)
     X_test_s   = scaler.transform(X_test)
 
-    # ── Model specs ────────────────────────────────────────────────────────
+    # Model specs
     model_specs = [
         (
             "logistic_regression",
@@ -133,7 +132,7 @@ def train(
     return results
 
 
-# ── Inference ─────────────────────────────────────────────────────────────────
+# Inference
 
 class AnomalyDetector:
     """
@@ -188,7 +187,7 @@ class AnomalyDetector:
         """Return the best available classifier (RF > LR > DT)."""
         return self.rf or self.lr or self.dt
 
-    # ── Public API ────────────────────────────────────────────────────────
+    # Public API
 
     def predict(self, features: dict) -> dict:
         """
@@ -251,7 +250,7 @@ class AnomalyDetector:
         return out
 
 
-# ── Anomaly type heuristic ────────────────────────────────────────────────────
+# Anomaly type heuristic
 
 def _infer_type(features: dict) -> str:
     """
@@ -281,7 +280,7 @@ def _infer_type(features: dict) -> str:
     return "xp_grinding"
 
 
-# ── Module-level singleton ────────────────────────────────────────────────────
+# Module-level singleton
 
 _detector: AnomalyDetector | None = None
 

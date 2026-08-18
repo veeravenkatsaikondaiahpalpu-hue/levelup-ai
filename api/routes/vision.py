@@ -1,36 +1,38 @@
 """
-api/routes/vision.py
-====================
-FastAPI router for LevelUp AI multimodal (image + text) endpoint.
+Multimodal chat endpoint — lets users send a photo along with their message.
+
+Powered by Qwen2.5-VL-7B-Instruct. Disabled by default because it needs 14GB+ VRAM;
+enable it by setting LEVELUP_LOAD_VISION=true before starting the server.
 
 Endpoints:
-  POST /api/chat/vision        -- send an image + text, get a reply
-  GET  /api/chat/vision/health -- check if vision model is loaded
+  POST /api/chat/vision        — send an image + text and get a persona reply
+  GET  /api/chat/vision/health — check whether the vision model is loaded
 """
 
 from __future__ import annotations
 
+import logging
 import time
-from typing import Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel
 
-from chatbot.vision_inference import get_vision_model, VisionChat
 from chatbot.prompt_template import FINETUNE_SYSTEM_PROMPTS
+from chatbot.vision_inference import VisionChat
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/chat/vision", tags=["vision"])
 
 
-# ── Response models ────────────────────────────────────────────────────────────
+# Response models
 
 class VisionResponse(BaseModel):
     reply:      str
     build:      str
     latency_ms: int
     has_image:  bool
-    audio_b64:  Optional[str] = None   # base64-encoded MP3 if audio=true
+    audio_b64:  str | None = None   # base64-encoded MP3 if audio=true
 
 
 class VisionHealthResponse(BaseModel):
@@ -40,7 +42,7 @@ class VisionHealthResponse(BaseModel):
     builds:       list[str]
 
 
-# ── Dependency ─────────────────────────────────────────────────────────────────
+# Dependency
 
 def get_model(request: Request) -> VisionChat:
     model = getattr(request.app.state, "vision_model", None)
@@ -52,7 +54,7 @@ def get_model(request: Request) -> VisionChat:
     return model
 
 
-# ── Endpoints ──────────────────────────────────────────────────────────────────
+# Endpoints
 
 @router.get("/health", response_model=VisionHealthResponse)
 async def vision_health(request: Request):
@@ -72,7 +74,7 @@ async def vision_chat(
     message: str = Form(..., description="The user's text question about the image"),
 
     # Optional image upload
-    image:   Optional[UploadFile] = File(default=None, description="Image file (JPEG, PNG, WebP, GIF)"),
+    image:   UploadFile | None = File(default=None, description="Image file (JPEG, PNG, WebP, GIF)"),
 
     # Optional generation params
     max_tokens:  int   = Form(default=512),
@@ -80,7 +82,7 @@ async def vision_chat(
 
     # Optional: return audio with the reply
     audio:   bool  = Form(default=False, description="If true, include base64-encoded MP3 audio"),
-    audio_build: Optional[str] = Form(default=None, description="Build to use for TTS voice (defaults to build)"),
+    audio_build: str | None = Form(default=None, description="Build to use for TTS voice (defaults to build)"),
 
     model: VisionChat = Depends(get_model),
 ):
@@ -104,7 +106,7 @@ async def vision_chat(
         )
 
     # Read image bytes if provided
-    image_bytes: Optional[bytes] = None
+    image_bytes: bytes | None = None
     image_ext:   str = ".jpg"
     if image is not None:
         image_bytes = await image.read()
@@ -127,18 +129,19 @@ async def vision_chat(
     )
     latency = int((time.time() - t0) * 1000)
 
-    # Optional TTS
-    audio_b64: Optional[str] = None
+    # TTS is optional and best-effort — a TTS failure doesn't fail the whole request
+    audio_b64: str | None = None
     if audio:
         try:
             import base64
+
             from voice.tts import speak_async
-            tts_build = (audio_build or build).upper()
+            tts_build       = (audio_build or build).upper()
             audio_bytes_out = await speak_async(reply, build=tts_build)
-            audio_b64 = base64.b64encode(audio_bytes_out).decode("utf-8")
-        except Exception as e:
-            # TTS is best-effort — don't fail the whole request
-            print(f"[TTS] Warning: could not generate audio: {e}")
+            audio_b64       = base64.b64encode(audio_bytes_out).decode("utf-8")
+        except Exception:
+            # Audio is a nice-to-have; the text reply still goes out.
+            logger.warning("TTS failed - returning reply without audio", exc_info=True)
 
     return VisionResponse(
         reply=reply,

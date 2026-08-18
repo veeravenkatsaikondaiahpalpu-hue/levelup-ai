@@ -1,8 +1,7 @@
 """
-preprocess.py - Fine-tuning data pipeline for the LevelUp AI chatbot.
-
-Downloads and formats datasets into instruction-tuning JSONL pairs:
-  {"system": <system_prompt>, "user": <message>, "assistant": <response>}
+Data pipeline that pulls from 22+ public datasets and our own handcrafted Q&A,
+then formats everything into JSONL instruction pairs ready for fine-tuning:
+  {"system": <persona prompt>, "user": <message>, "assistant": <response>}
 
 Sources — General (wellness / fitness / mental health):
   1.  HealthCareMagic-100k       lavita/ChatDoctor-HealthCareMagic-100k   (112k rows)
@@ -41,20 +40,20 @@ Output:
   data/raw/finetune_val.jsonl       — chatbot fine-tuning val split
   data/raw/sentiment_dataset.jsonl  — BERT sentiment train data
 
-Run (offline, no download):
+Run offline (uses only built-in seed data, no internet needed):
   python data/preprocess.py --sources xp_qa rpg_dialogues
 
-Run (all including must-haves):
+Run everything (downloads all 22+ datasets from HuggingFace):
   python data/preprocess.py --sources all
 
-Run (selective):
+Run a specific subset:
   python data/preprocess.py --sources healthcare_magic gym_exercise fitness_qa_large
 """
 
+import argparse
 import json
 import os
 import random
-import argparse
 import sys
 
 SEED = 42
@@ -62,7 +61,8 @@ random.seed(SEED)
 
 OUTPUT_DIR = "data/raw"
 
-# ── Wellness / fitness filter keywords ───────────────────────────────────────
+# Used to filter general health datasets — we only keep rows that mention
+# at least one of these topics so we don't inject irrelevant medical content
 WELLNESS_KEYWORDS = {
     "exercise", "workout", "gym", "fitness", "weight", "diet", "nutrition",
     "sleep", "stress", "anxiety", "meditation", "running", "yoga", "cardio",
@@ -71,7 +71,7 @@ WELLNESS_KEYWORDS = {
     "hydration", "recovery", "stretch", "flexibility", "strength", "endurance",
 }
 
-# ── Generic system prompt for fine-tuning ────────────────────────────────────
+# Generic system prompt for fine-tuning
 GENERIC_SYSTEM = (
     "You are an AI companion for LevelUp, an RPG-inspired self-improvement app. "
     "You help users earn XP, track activities, maintain streaks, and stay motivated. "
@@ -79,7 +79,7 @@ GENERIC_SYSTEM = (
     "Never give medical diagnoses. Keep answers concise and action-oriented."
 )
 
-# ── Sentiment tag mappings (for quotes dataset) ───────────────────────────────
+# Weak labels for the English Quotes dataset — map quote tags to our 3 sentiment classes
 MOTIVATED_TAGS  = {"inspirational", "motivation", "success", "courage", "achievement",
                    "confidence", "determination", "perseverance", "strength", "goals",
                    "winning", "victory", "champion", "power", "ambition"}
@@ -87,22 +87,21 @@ STRUGGLING_TAGS = {"sadness", "struggle", "grief", "depression", "pain", "failur
                    "loss", "fear", "doubt", "despair", "difficult", "adversity"}
 
 
-# ─────────────────────────────────────────────────────────────────────────────
 # Loaders
-# ─────────────────────────────────────────────────────────────────────────────
 
 def _try_load(dataset_id: str, **kwargs):
-    """Wrapper around load_dataset with clear error output."""
+    """Download a HuggingFace dataset, printing a clear message if it fails.
+    Returns None on failure so the caller can skip gracefully."""
     try:
         from datasets import load_dataset
         print(f"  Downloading {dataset_id} ...")
         return load_dataset(dataset_id, **kwargs)
     except Exception as e:
-        print(f"  [SKIP] {dataset_id} failed: {e}")
+        print(f"  [SKIP] {dataset_id} — {e}")
         return None
 
 
-# 1. HealthCareMagic ──────────────────────────────────────────────────────────
+# 1. HealthCareMagic
 
 def load_healthcare_magic(max_samples: int = 3000):
     ds = _try_load("lavita/ChatDoctor-HealthCareMagic-100k",
@@ -126,7 +125,7 @@ def load_healthcare_magic(max_samples: int = 3000):
     print(f"  HealthCareMagic: {count} samples loaded.")
 
 
-# 2. MentalChat16K ────────────────────────────────────────────────────────────
+# 2. MentalChat16K
 
 def load_mentalchat(max_samples: int = 5000):
     ds = _try_load("ShenLab/MentalChat16K", split="train")
@@ -150,7 +149,7 @@ def load_mentalchat(max_samples: int = 5000):
     print(f"  MentalChat16K: {count} samples loaded.")
 
 
-# 3. Fitness Q&A ──────────────────────────────────────────────────────────────
+# 3. Fitness Q&A
 
 def load_fitness_qa():
     ds = _try_load("its-myrto/fitness-question-answers", split="train")
@@ -166,7 +165,7 @@ def load_fitness_qa():
     print(f"  Fitness Q&A: {count} samples loaded.")
 
 
-# 4. Fitness Chat (instruction-format) ────────────────────────────────────────
+# 4. Fitness Chat (instruction-format)
 
 def load_fitness_chat():
     ds = _try_load("chibbss/fitness-chat-prompt-completion-dataset", split="train")
@@ -182,7 +181,7 @@ def load_fitness_chat():
     print(f"  Fitness Chat: {count} samples loaded.")
 
 
-# 5. Mental Health Counseling Conversations ───────────────────────────────────
+# 5. Mental Health Counseling Conversations
 
 def load_mental_counseling(max_samples: int = 2000):
     ds = _try_load("Amod/mental_health_counseling_conversations", split="train")
@@ -200,7 +199,7 @@ def load_mental_counseling(max_samples: int = 2000):
     print(f"  Mental Counseling: {count} samples loaded.")
 
 
-# 6. NPC Dialogue (RPG style injection) ───────────────────────────────────────
+# 6. NPC Dialogue (RPG style injection)
 
 def load_npc_dialogue():
     ds = _try_load("amaydle/npc-dialogue", split="train")
@@ -223,16 +222,18 @@ def load_npc_dialogue():
     print(f"  NPC Dialogue: {count} samples loaded.")
 
 
-# 7. English Quotes → BERT Sentiment dataset ──────────────────────────────────
+# 7. English Quotes → BERT Sentiment dataset
 
 def load_sentiment_quotes(output_path: str = "data/raw/sentiment_dataset.jsonl"):
     """
-    Loads quotes and weak-labels them for BERT sentiment training.
-    Label map:
-      motivated  — tags overlap with MOTIVATED_TAGS
-      struggling — tags overlap with STRUGGLING_TAGS
+    Pull the English Quotes dataset and weak-label each quote based on its tags.
+    The resulting JSONL goes straight to the sentiment model training pipeline,
+    not into the chatbot fine-tuning data.
+
+    Label logic:
+      motivated  — at least one tag overlaps with MOTIVATED_TAGS
+      struggling — at least one tag overlaps with STRUGGLING_TAGS
       neutral    — everything else
-    Writes directly to output_path (not returned as instruction pairs).
     """
     ds = _try_load("Abirate/english_quotes", split="train")
     if ds is None:
@@ -264,7 +265,7 @@ def load_sentiment_quotes(output_path: str = "data/raw/sentiment_dataset.jsonl")
     return total
 
 
-# ── Build-Specific System Prompts ────────────────────────────────────────────
+# Build-Specific System Prompts
 # These are injected instead of GENERIC_SYSTEM for build-specific datasets
 # so the model learns to give contextually appropriate answers per build.
 
@@ -307,10 +308,10 @@ BUILD_SYSTEMS = {
 }
 
 
-# 10. GYM Exercise (Llama chat format) ────────────────────────────────────────
+# 10. GYM Exercise (Llama chat format)
 
 def load_gym_exercise(max_samples: int = 1660):
-    """onurSakar/GYM-Exercise — single 'text' column in Llama [INST]...[/INST] format."""
+    """onurSakar/GYM-Exercise — Llama [INST]...[/INST] format, needs manual parsing."""
     ds = _try_load("onurSakar/GYM-Exercise", split="train")
     if ds is None:
         return
@@ -334,7 +335,7 @@ def load_gym_exercise(max_samples: int = 1660):
     print(f"  GYM Exercise: {count} samples loaded.")
 
 
-# 11. Fitness Q&A Large (Apache 2.0 — 123k rows) ──────────────────────────────
+# 11. Fitness Q&A Large (Apache 2.0 — 123k rows)
 
 def load_fitness_qa_large(max_samples: int = 8000):
     """hammamwahab/fitness-qa — columns: context, question, answer."""
@@ -353,7 +354,7 @@ def load_fitness_qa_large(max_samples: int = 8000):
     print(f"  Fitness Q&A Large: {count} samples loaded.")
 
 
-# 12. Motivational Interviewing Therapy ───────────────────────────────────────
+# 12. Motivational Interviewing Therapy
 
 def load_motivational_interviewing(max_samples: int = 500):
     """to-be/annomi — columns: id, conversations (list of {from: gpt/human, value: ...})."""
@@ -383,7 +384,7 @@ def load_motivational_interviewing(max_samples: int = 500):
     print(f"  Motivational Interviewing: {count} samples loaded.")
 
 
-# 13. D&D Critical Role / CRD3 (RPG tone injection) ───────────────────────────
+# 13. D&D Critical Role / CRD3 (RPG tone injection)
 
 def load_dnd_crd3(max_samples: int = 3000):
     ds = _try_load("microsoft/crd3", split="train")
@@ -416,9 +417,9 @@ def load_dnd_crd3(max_samples: int = 3000):
     print(f"  D&D CRD3: {count} samples loaded.")
 
 
-# ── Build-Specific Loaders ────────────────────────────────────────────────────
+# Build-Specific Loaders
 
-# 14. INTELLIGENCE — Open Q&A (academic, study, knowledge) ────────────────────
+# 14. INTELLIGENCE — Open Q&A (academic, study, knowledge)
 
 INTELLIGENCE_QA = [
     ("How can I study more effectively?",
@@ -466,7 +467,7 @@ def load_intelligence_qa():
         yield {"system": sys_prompt, "user": user_msg, "assistant": assistant_msg}
 
 
-# 15. DEXTERITY — Coding, instruments, martial arts, sports ───────────────────
+# 15. DEXTERITY — Coding, instruments, martial arts, sports
 
 DEXTERITY_QA = [
     ("How do I get better at coding faster?",
@@ -512,7 +513,7 @@ def load_dexterity_qa():
         yield {"system": sys_prompt, "user": user_msg, "assistant": assistant_msg}
 
 
-# 16. CREATIVE — Art, music, writing, design ──────────────────────────────────
+# 16. CREATIVE — Art, music, writing, design
 
 CREATIVE_QA = [
     ("How do I overcome creative block?",
@@ -558,7 +559,7 @@ def load_creative_qa():
         yield {"system": sys_prompt, "user": user_msg, "assistant": assistant_msg}
 
 
-# 17. ENTREPRENEUR — Business, productivity, networking ───────────────────────
+# 17. ENTREPRENEUR — Business, productivity, networking
 
 ENTREPRENEUR_QA = [
     ("How do I start a business with no money?",
@@ -608,7 +609,7 @@ def load_entrepreneur_qa():
         yield {"system": sys_prompt, "user": user_msg, "assistant": assistant_msg}
 
 
-# 18. GAMER — Esports, gaming strategy, streaming ─────────────────────────────
+# 18. GAMER — Esports, gaming strategy, streaming
 
 GAMER_QA = [
     ("How do I get better at competitive games?",
@@ -668,9 +669,9 @@ def load_gamer_qa():
         yield {"system": sys_prompt, "user": user_msg, "assistant": assistant_msg}
 
 
-# ── Build-Specific HuggingFace Datasets ──────────────────────────────────────
+# Build-Specific HuggingFace Datasets
 
-# 19. INTELLIGENCE — Education / Tutoring (HF) ────────────────────────────────
+# 19. INTELLIGENCE — Education / Tutoring (HF)
 
 def load_education_hf(max_samples: int = 2000):
     """ajibawa-2023/Education-High-School-Students — columns: prompt, text, text_token_length."""
@@ -717,7 +718,7 @@ def load_socratic_conversations(max_samples: int = 1000):
     print(f"  Socratic Conversations: {count} samples loaded.")
 
 
-# 20. CREATIVE — Writing Prompts (HF) ─────────────────────────────────────────
+# 20. CREATIVE — Writing Prompts (HF)
 
 def load_writing_prompts(max_samples: int = 2000):
     """euclaise/writingprompts — 303k MIT, Reddit r/WritingPrompts stories."""
@@ -744,7 +745,7 @@ def load_writing_prompts(max_samples: int = 2000):
     print(f"  Writing Prompts: {count} samples loaded.")
 
 
-# 21. ENTREPRENEUR — Startup Interviews (HF) ──────────────────────────────────
+# 21. ENTREPRENEUR — Startup Interviews (HF)
 
 def load_startup_interviews():
     """Glavin001/startup-interviews — 554 rows, YC lecture Q&A, CC-BY-NC-2.0."""
@@ -763,7 +764,7 @@ def load_startup_interviews():
 
 
 def load_sales_conversations(max_samples: int = 1500):
-    """goendalf666/sales-conversations-instruction-base — single column '0' with full dialogue."""
+    """goendalf666/sales-conversations-instruction-base — the column is literally named '0'."""
     ds = _try_load("goendalf666/sales-conversations-instruction-base", split="train")
     if ds is None:
         return
@@ -772,7 +773,7 @@ def load_sales_conversations(max_samples: int = 1500):
     for row in ds:
         if count >= max_samples:
             break
-        # Column is literally named "0" — contains full convo with Customer/Salesman labels
+        # The dataset stores full conversations in a column literally named "0"
         raw = str(row.get("0") or "").strip()
         # Split on "Salesman:" to separate context (customer side) from response
         if "Salesman:" in raw and "Customer:" in raw:
@@ -790,7 +791,7 @@ def load_sales_conversations(max_samples: int = 1500):
     print(f"  Sales Conversations: {count} samples loaded.")
 
 
-# 22. GAMER — Dota2 Instruct (HF) ────────────────────────────────────────────
+# 22. GAMER — Dota2 Instruct (HF)
 
 def load_dota2_instruct():
     """Aiden07/dota2_instruct_prompt — 4.7k MIT, Dota 2 strategy Q&A."""
@@ -808,7 +809,7 @@ def load_dota2_instruct():
     print(f"  Dota2 Instruct: {count} samples loaded.")
 
 
-# 8. Local RPG Dialogues ───────────────────────────────────────────────────────
+# 8. Local RPG Dialogues
 
 def load_rpg_dialogues(path: str = "data/raw/rpg_dialogues.jsonl"):
     if os.path.exists(path):
@@ -828,7 +829,7 @@ def load_rpg_dialogues(path: str = "data/raw/rpg_dialogues.jsonl"):
         yield from _builtin_rpg_seed_dialogues()
 
 
-# 9. Built-in XP Q&A ──────────────────────────────────────────────────────────
+# 9. Built-in XP Q&A
 
 XP_QA_PAIRS = [
     ("What is the XP formula?",
@@ -937,12 +938,10 @@ def _builtin_rpg_seed_dialogues():
         }
 
 
-# ─────────────────────────────────────────────────────────────────────────────
 # Assembler
-# ─────────────────────────────────────────────────────────────────────────────
 
 SOURCE_MAP = {
-    # ── Original sources ──────────────────────────────────────────────────────
+    # Original sources
     "healthcare_magic":          load_healthcare_magic,
     "mentalchat":                load_mentalchat,
     "fitness_qa":                load_fitness_qa,
@@ -951,18 +950,18 @@ SOURCE_MAP = {
     "npc_dialogue":              load_npc_dialogue,
     "rpg_dialogues":             load_rpg_dialogues,
     "xp_qa":                     load_xp_qa,
-    # ── Must-have additions ───────────────────────────────────────────────────
+    # Must-have additions
     "gym_exercise":              load_gym_exercise,
     "fitness_qa_large":          load_fitness_qa_large,
     "motivational_interviewing": load_motivational_interviewing,
     "dnd_crd3":                  load_dnd_crd3,
-    # ── Build-specific handcrafted Q&A ────────────────────────────────────────
+    # Build-specific handcrafted Q&A
     "intelligence_qa":           load_intelligence_qa,
     "dexterity_qa":              load_dexterity_qa,
     "creative_qa":               load_creative_qa,
     "entrepreneur_qa":           load_entrepreneur_qa,
     "gamer_qa":                  load_gamer_qa,
-    # ── Build-specific HuggingFace datasets ───────────────────────────────────
+    # Build-specific HuggingFace datasets
     "education_hf":              load_education_hf,
     "socratic_conversations":    load_socratic_conversations,
     "writing_prompts":           load_writing_prompts,
@@ -975,6 +974,7 @@ ALL_SOURCES = list(SOURCE_MAP.keys())
 
 
 def write_jsonl(records: list[dict], path: str):
+    """Write a list of dicts to a JSONL file, one record per line."""
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
         for rec in records:
@@ -1003,7 +1003,7 @@ def build_dataset(
             records.extend(SOURCE_MAP[source]())
 
     if include_sentiment and ("all" in (sources or []) or "sentiment_quotes" in (sources or [])):
-        print(f"\n[+] Building sentiment dataset from English Quotes ...")
+        print("\n[+] Building sentiment dataset from English Quotes ...")
         load_sentiment_quotes()
 
     print(f"\nTotal samples collected: {len(records):,}")
@@ -1022,13 +1022,13 @@ def build_dataset(
     write_jsonl(train_recs, train_path)
     write_jsonl(val_recs,   val_path)
 
-    print(f"\nDataset written:")
+    print("\nDataset written:")
     print(f"  Train : {train_path}  ({len(train_recs):,} samples)")
     print(f"  Val   : {val_path}  ({len(val_recs):,} samples)")
     return train_path, val_path
 
 
-# ── CLI ───────────────────────────────────────────────────────────────────────
+# CLI
 
 if __name__ == "__main__":
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

@@ -1,6 +1,4 @@
 """
-smoke_test.py
-=============
 Verifies the full QLoRA training pipeline using TinyLlama-1.1B
 (open-access, no HuggingFace token required, fits on any GPU).
 
@@ -18,23 +16,22 @@ Usage:
     python -m chatbot.fine_tuning.smoke_test
 """
 
-import sys, os
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 import torch
-from datasets import Dataset
 from peft import LoraConfig, TaskType, get_peft_model, prepare_model_for_kbit_training
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
     BitsAndBytesConfig,
 )
-from trl import SFTTrainer, SFTConfig
+from trl import SFTConfig, SFTTrainer
 
-# ── Config ─────────────────────────────────────────────────────────────────────
+# Config
 SMOKE_MODEL   = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
 OUT_DIR       = str(ROOT / "models" / "checkpoints" / "smoke-test")
 FINAL_DIR     = str(ROOT / "models" / "final" / "smoke-test")
@@ -63,7 +60,7 @@ def main():
 
     results = {}
 
-    # ── [1] Dataset ────────────────────────────────────────────────────────────
+    # [1] Dataset
     section("[1] Dataset loading + formatting")
     try:
         from chatbot.fine_tuning.dataset_prep import load_levelup_dataset
@@ -93,7 +90,7 @@ def main():
         results["dataset"] = False
         raise
 
-    # ── [2] Tokenizer ──────────────────────────────────────────────────────────
+    # [2] Tokenizer
     section("[2] Tokenizer loading")
     try:
         tokenizer = AutoTokenizer.from_pretrained(SMOKE_MODEL)
@@ -111,7 +108,7 @@ def main():
         results["tokenizer"] = False
         raise
 
-    # ── [3] Model + 4-bit quant ────────────────────────────────────────────────
+    # [3] Model + 4-bit quant
     section("[3] Model loading (4-bit QLoRA)")
     try:
         bnb = BitsAndBytesConfig(
@@ -139,7 +136,7 @@ def main():
         results["model"] = False
         raise
 
-    # ── [4] LoRA adapter ───────────────────────────────────────────────────────
+    # [4] LoRA adapter
     section("[4] LoRA adapter attachment")
     try:
         # TinyLlama target modules
@@ -164,7 +161,7 @@ def main():
         results["lora"] = False
         raise
 
-    # ── [5] Training run (20 steps) ────────────────────────────────────────────
+    # [5] Training run (20 steps)
     section(f"[5] SFTTrainer — {NUM_STEPS} steps")
     try:
         Path(OUT_DIR).mkdir(parents=True, exist_ok=True)
@@ -214,7 +211,7 @@ def main():
         import traceback; traceback.print_exc()
         results["training"] = False
 
-    # ── [6] Save adapter ───────────────────────────────────────────────────────
+    # [6] Save adapter
     section("[6] Save & reload adapter")
     try:
         Path(FINAL_DIR).mkdir(parents=True, exist_ok=True)
@@ -245,7 +242,7 @@ def main():
         print(f"  {FAIL} Save/reload FAILED: {e}")
         results["save"] = False
 
-    # ── Summary ────────────────────────────────────────────────────────────────
+    # Summary
     print("\n" + "="*55)
     print("  SMOKE TEST RESULTS")
     print("="*55)

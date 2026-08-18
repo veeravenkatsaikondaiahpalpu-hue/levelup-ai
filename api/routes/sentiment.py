@@ -1,27 +1,25 @@
 """
-api/routes/sentiment.py
-========================
-Sentiment analysis endpoint for LevelUp AI.
+Sentiment analysis endpoint — classifies user messages before the chatbot replies
+so we can adjust the AI's tone based on how the user is feeling.
 
 POST /api/sentiment/analyze
-    Body  : {"text": "..."}
-    Return: SentimentResult (label, confidence, scores, flag, all_models)
+    Body   : {"text": "..."}
+    Returns: SentimentResult (label, confidence, scores, flag, per-model breakdown)
 
 POST /api/sentiment/batch
-    Body  : {"texts": ["...", "...", ...]}
-    Return: list of SentimentResult
+    Body   : {"texts": ["...", "...", ...]}
+    Returns: list of SentimentResult — handy for processing chat history in bulk
 
 GET /api/sentiment/health
-    Return: model load status
+    Returns: whether the sentiment models are loaded and ready
 
-The "flag" field is what the chatbot layer uses:
-    "support_mode" -> switch to empathetic, supportive tone
-    "hype_mode"    -> switch to energetic, celebratory tone
-    null           -> default coaching tone
+The "flag" field is what the chatbot layer actually acts on:
+    "support_mode" — user seems to be struggling → AI responds with warmth and empathy
+    "hype_mode"    — user is fired up → AI matches the energy and celebrates
+    null           — neutral / low confidence → stick with the standard coaching tone
 """
 
 import time
-from typing import Optional
 
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
@@ -29,7 +27,7 @@ from pydantic import BaseModel, Field
 router = APIRouter(prefix="/api/sentiment", tags=["sentiment"])
 
 
-# ── Schemas ───────────────────────────────────────────────────────────────────
+# Schemas
 
 class TextInput(BaseModel):
     text: str = Field(..., min_length=1, description="User message to analyse")
@@ -50,27 +48,27 @@ class ModelPrediction(BaseModel):
 
 
 class AllModelScores(BaseModel):
-    logistic_regression: Optional[ModelPrediction] = None
-    linear_svc:          Optional[ModelPrediction] = None
-    xgboost:             Optional[ModelPrediction] = None
-    lightgbm:            Optional[ModelPrediction] = None
-    voting_ensemble:     Optional[ModelPrediction] = None
-    stacking_ensemble:   Optional[ModelPrediction] = None
+    logistic_regression: ModelPrediction | None = None
+    linear_svc:          ModelPrediction | None = None
+    xgboost:             ModelPrediction | None = None
+    lightgbm:            ModelPrediction | None = None
+    voting_ensemble:     ModelPrediction | None = None
+    stacking_ensemble:   ModelPrediction | None = None
 
 
 class SentimentResult(BaseModel):
     label:      str   = Field(description="neutral | motivated | struggling")
     confidence: float = Field(description="Primary model's probability for predicted label")
     scores:     dict  = Field(description="Per-class probabilities {neutral, motivated, struggling}")
-    flag:       Optional[str] = Field(
+    flag:       str | None = Field(
         None,
         description="support_mode | hype_mode | null — chatbot tone hint"
     )
-    all_models: Optional[AllModelScores] = None
+    all_models: AllModelScores | None = None
     latency_ms: float
 
 
-# ── Lazy analyzer loader ──────────────────────────────────────────────────────
+# Lazy analyzer loader
 
 _analyzer = None
 
@@ -98,7 +96,7 @@ def _get_analyzer():
     return _analyzer
 
 
-# ── Helper ────────────────────────────────────────────────────────────────────
+# Helper
 
 def _to_result(raw: dict, latency_ms: float) -> SentimentResult:
     all_m = raw.get("all_models", {})
@@ -115,7 +113,7 @@ def _to_result(raw: dict, latency_ms: float) -> SentimentResult:
     )
 
 
-# ── Endpoints ─────────────────────────────────────────────────────────────────
+# Endpoints
 
 @router.post(
     "/analyze",

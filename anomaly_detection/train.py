@@ -1,6 +1,4 @@
 """
-anomaly_detection/train.py
-===========================
 Entry point: train all three anomaly detection classifiers, then
 immediately evaluate them on the test split.
 

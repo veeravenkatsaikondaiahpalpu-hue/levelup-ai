@@ -3,24 +3,34 @@ Tests for the XP Engine.
 Run with: python -m pytest tests/ -v
 """
 
-import pytest
 from datetime import date, timedelta
 
 from xp_engine import (
-    BuildType, Intensity, calculate_xp, get_streak_multiplier,
-    get_daily_cap, calculate_level, is_primary_activity,
-    get_xp_relevance_multiplier, get_badge_index_for_xp,
-    BuildProfile, UserState, ActivityLog,
-    calculate_gamer_xp, get_combo_multiplier, is_boss_day,
-    get_gamer_daily_cap, qualifies_for_speedrun_bonus,
-    get_gamer_relevance_multiplier,
-    GAMER_OVERTIME_LIMIT, GAMER_BOSS_DAY_INTERVAL,
-    GAMER_SPEEDRUN_BONUS_XP, GAMER_SPEEDRUN_THRESHOLD_MINS,
+    GAMER_BOSS_DAY_INTERVAL,
+    GAMER_OVERTIME_LIMIT,
     GAMER_SIDE_QUEST_MULTIPLIER,
+    GAMER_SPEEDRUN_BONUS_XP,
+    GAMER_SPEEDRUN_THRESHOLD_MINS,
+    BuildProfile,
+    BuildType,
+    Intensity,
+    UserState,
+    calculate_gamer_xp,
+    calculate_level,
+    calculate_xp,
+    get_badge_index_for_xp,
+    get_combo_multiplier,
+    get_daily_cap,
+    get_gamer_daily_cap,
+    get_gamer_relevance_multiplier,
+    get_streak_multiplier,
+    get_xp_relevance_multiplier,
+    is_boss_day,
+    is_primary_activity,
+    qualifies_for_speedrun_bonus,
 )
 
-
-# ── calculate_level ───────────────────────────────────────────────────────────
+# calculate_level
 
 class TestCalculateLevel:
     def test_level_1_at_zero_xp(self):
@@ -45,7 +55,7 @@ class TestCalculateLevel:
         assert calculate_level(23_000) == 21
 
 
-# ── get_streak_multiplier ─────────────────────────────────────────────────────
+# get_streak_multiplier
 
 class TestStreakMultiplier:
     def test_day_1_is_1x(self):
@@ -85,7 +95,7 @@ class TestStreakMultiplier:
         assert mult == 2.5
 
 
-# ── get_daily_cap ─────────────────────────────────────────────────────────────
+# get_daily_cap
 
 class TestDailyCap:
     def test_level_1_cap_is_600(self):
@@ -104,7 +114,7 @@ class TestDailyCap:
         assert get_daily_cap(21) == 1_000
 
 
-# ── is_primary_activity ───────────────────────────────────────────────────────
+# is_primary_activity
 
 class TestPrimaryActivity:
     def test_gym_is_primary_for_strength(self):
@@ -132,7 +142,7 @@ class TestPrimaryActivity:
         assert get_xp_relevance_multiplier("gym_session", BuildType.INTELLIGENCE) == 0.5
 
 
-# ── calculate_xp ─────────────────────────────────────────────────────────────
+# calculate_xp
 
 class TestCalculateXP:
     def test_basic_primary_activity(self):
@@ -246,7 +256,7 @@ class TestCalculateXP:
         assert "gym_session" in summary
 
 
-# ── get_badge_index_for_xp ────────────────────────────────────────────────────
+# get_badge_index_for_xp
 
 class TestBadgeIndex:
     def test_no_badge_below_1000(self):
@@ -262,7 +272,7 @@ class TestBadgeIndex:
         assert get_badge_index_for_xp(150_000) == 5
 
 
-# ── BuildProfile ──────────────────────────────────────────────────────────────
+# BuildProfile
 
 class TestBuildProfile:
     def test_starts_at_level_1(self):
@@ -287,7 +297,7 @@ class TestBuildProfile:
         assert profile.xp_to_next_badge == 1_000
 
 
-# ── UserState ─────────────────────────────────────────────────────────────────
+# UserState
 
 class TestUserState:
     def _make_user(self, build=BuildType.STRENGTH, xp=0):
@@ -372,7 +382,7 @@ class TestUserState:
             assert key in ctx, f"Missing gamer key: {key}"
 
 
-# ── Gamer Mechanics ───────────────────────────────────────────────────────────
+# Gamer Mechanics
 
 class TestGamerComboMultiplier:
     def test_first_session_no_combo(self):

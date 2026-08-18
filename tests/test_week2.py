@@ -3,28 +3,27 @@ Tests for Week 2 modules: system_prompt and anomaly data generator.
 Run with: python -m pytest tests/test_week2.py -v
 """
 
-import sys
-import os
 import csv
-import json
-import tempfile
-import pytest
+import os
+import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from chatbot.system_prompt import (
-    build_system_prompt, detect_mode,
     BUILD_PERSONALITY,
+    build_system_prompt,
+    detect_mode,
 )
-from xp_engine import BuildType, UserState, BuildProfile
 from data.generate_anomaly_data import (
-    gen_normal, gen_anomaly_xp_grinding,
-    gen_anomaly_impossible_streak, gen_anomaly_intensity_spoofing,
-    generate_dataset, LogRecord,
+    LogRecord,
+    gen_anomaly_impossible_streak,
+    gen_anomaly_intensity_spoofing,
+    gen_anomaly_xp_grinding,
+    gen_normal,
+    generate_dataset,
 )
 
-
-# ── Fixtures ──────────────────────────────────────────────────────────────────
+# Fixtures
 
 def make_ctx(build="strength", streak=1, daily_xp=0, level=1, xp=0):
     """Build a minimal context dict for system prompt tests."""
@@ -53,7 +52,7 @@ def make_ctx(build="strength", streak=1, daily_xp=0, level=1, xp=0):
     }
 
 
-# ── system_prompt: build_system_prompt ───────────────────────────────────────
+# system_prompt: build_system_prompt
 
 class TestBuildSystemPrompt:
 
@@ -146,7 +145,7 @@ class TestBuildSystemPrompt:
         assert "Legendary" in prompt or "YES" in prompt
 
 
-# ── system_prompt: detect_mode ────────────────────────────────────────────────
+# system_prompt: detect_mode
 
 class TestDetectMode:
 
@@ -178,7 +177,7 @@ class TestDetectMode:
         assert detect_mode("HOW MUCH XP?") == "xp_coach"
 
 
-# ── Anomaly Data Generator ────────────────────────────────────────────────────
+# Anomaly Data Generator
 
 class TestNormalGenerator:
 

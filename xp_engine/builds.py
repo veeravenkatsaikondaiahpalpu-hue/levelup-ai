@@ -7,10 +7,8 @@ Every build has:
 """
 
 from enum import Enum
-from typing import Dict, Optional
 
-
-# ── Build Types ───────────────────────────────────────────────────────────────
+# Build Types
 
 class BuildType(Enum):
     STRENGTH     = "strength"
@@ -22,28 +20,28 @@ class BuildType(Enum):
     GAMER        = "gamer"          # ⚡ Unique mechanics — see gamer_mechanics.py
 
 
-# ── Intensity Levels ──────────────────────────────────────────────────────────
+# Intensity Levels
 
 class Intensity(Enum):
     LIGHT    = "light"
     MODERATE = "moderate"
     INTENSE  = "intense"
 
-INTENSITY_MULTIPLIERS: Dict[Intensity, float] = {
+INTENSITY_MULTIPLIERS: dict[Intensity, float] = {
     Intensity.LIGHT:    1.0,
     Intensity.MODERATE: 1.5,
     Intensity.INTENSE:  2.0,
 }
 
 
-# ── Badge Tiers ───────────────────────────────────────────────────────────────
+# Badge Tiers
 # 6 tiers per build. XP thresholds are shared across all builds.
 # Reaching Tier 6 (index 5) = Legendary = unlocks a new primary build slot.
 
 BADGE_XP_THRESHOLDS = [1_000, 5_000, 15_000, 35_000, 75_000, 150_000]
 LEGENDARY_BADGE_INDEX = 5
 
-BADGE_TIERS: Dict[BuildType, list] = {
+BADGE_TIERS: dict[BuildType, list] = {
     BuildType.STRENGTH:     ["Iron",     "Bronze Warrior",  "Silver Gladiator", "Gold Champion", "Platinum Titan",  "Legendary Titan"],
     BuildType.INTELLIGENCE: ["Curious",  "Apprentice",      "Scholar",          "Sage",          "Mastermind",      "Oracle"],
     BuildType.DEXTERITY:    ["Nimble",   "Swift",           "Agile",            "Razor",         "Phantom",         "Ghost"],
@@ -54,7 +52,7 @@ BADGE_TIERS: Dict[BuildType, list] = {
     BuildType.GAMER:        ["Noob",     "Casual",          "Ranked",           "Diamond",       "Grandmaster",     "GOD TIER"],
 }
 
-BUILD_DISPLAY_NAMES: Dict[BuildType, str] = {
+BUILD_DISPLAY_NAMES: dict[BuildType, str] = {
     BuildType.STRENGTH:     "Strength",
     BuildType.INTELLIGENCE: "Intelligence",
     BuildType.DEXTERITY:    "Dexterity",
@@ -64,7 +62,7 @@ BUILD_DISPLAY_NAMES: Dict[BuildType, str] = {
     BuildType.GAMER:        "GAMER",        # all caps — intentional
 }
 
-BUILD_DESCRIPTIONS: Dict[BuildType, str] = {
+BUILD_DESCRIPTIONS: dict[BuildType, str] = {
     BuildType.STRENGTH:     "Physical fitness, gym, sports, endurance",
     BuildType.INTELLIGENCE: "Study, reading, research, online courses",
     BuildType.DEXTERITY:    "Skills, instruments, martial arts, coding precision",
@@ -75,11 +73,11 @@ BUILD_DESCRIPTIONS: Dict[BuildType, str] = {
 }
 
 
-# ── Activity Relevance Table ──────────────────────────────────────────────────
+# Activity Relevance Table
 # score >= 0.8 -> primary activity for that build -> 1.0x XP multiplier
 # score <  0.8 -> non-primary                     -> 0.5x XP multiplier
 
-BUILD_RELEVANCE: Dict[str, Dict[BuildType, float]] = {
+BUILD_RELEVANCE: dict[str, dict[BuildType, float]] = {
     # ── Physical ─────────────────────────────────── STR    INT    DEX    WEL    CRE    ENT    GAMER
     "gym_session":         {BuildType.STRENGTH: 1.0, BuildType.INTELLIGENCE: 0.15, BuildType.DEXTERITY: 0.4,  BuildType.WELLNESS: 0.3,  BuildType.CREATIVE: 0.1,  BuildType.ENTREPRENEUR: 0.1,  BuildType.GAMER: 0.3 },
     "running":             {BuildType.STRENGTH: 0.9, BuildType.INTELLIGENCE: 0.1,  BuildType.DEXTERITY: 0.6,  BuildType.WELLNESS: 0.5,  BuildType.CREATIVE: 0.1,  BuildType.ENTREPRENEUR: 0.1,  BuildType.GAMER: 0.3 },
@@ -88,28 +86,28 @@ BUILD_RELEVANCE: Dict[str, Dict[BuildType, float]] = {
     "martial_arts":        {BuildType.STRENGTH: 0.8, BuildType.INTELLIGENCE: 0.2,  BuildType.DEXTERITY: 1.0,  BuildType.WELLNESS: 0.3,  BuildType.CREATIVE: 0.1,  BuildType.ENTREPRENEUR: 0.1,  BuildType.GAMER: 0.35},
     "yoga":                {BuildType.STRENGTH: 0.4, BuildType.INTELLIGENCE: 0.2,  BuildType.DEXTERITY: 0.6,  BuildType.WELLNESS: 0.9,  BuildType.CREATIVE: 0.2,  BuildType.ENTREPRENEUR: 0.1,  BuildType.GAMER: 0.1 },
     "swimming":            {BuildType.STRENGTH: 0.9, BuildType.INTELLIGENCE: 0.1,  BuildType.DEXTERITY: 0.7,  BuildType.WELLNESS: 0.5,  BuildType.CREATIVE: 0.1,  BuildType.ENTREPRENEUR: 0.1,  BuildType.GAMER: 0.2 },
-    # ── Mental / Study ──────────────────────────────────────────────────────────────────────────────
+    # Mental / Study
     "study_session":       {BuildType.STRENGTH: 0.2, BuildType.INTELLIGENCE: 1.0,  BuildType.DEXTERITY: 0.25, BuildType.WELLNESS: 0.2,  BuildType.CREATIVE: 0.3,  BuildType.ENTREPRENEUR: 0.6,  BuildType.GAMER: 0.3 },
     "reading":             {BuildType.STRENGTH: 0.1, BuildType.INTELLIGENCE: 0.9,  BuildType.DEXTERITY: 0.2,  BuildType.WELLNESS: 0.3,  BuildType.CREATIVE: 0.4,  BuildType.ENTREPRENEUR: 0.5,  BuildType.GAMER: 0.3 },
     "online_course":       {BuildType.STRENGTH: 0.1, BuildType.INTELLIGENCE: 1.0,  BuildType.DEXTERITY: 0.3,  BuildType.WELLNESS: 0.2,  BuildType.CREATIVE: 0.35, BuildType.ENTREPRENEUR: 0.65, BuildType.GAMER: 0.35},
     "research":            {BuildType.STRENGTH: 0.1, BuildType.INTELLIGENCE: 1.0,  BuildType.DEXTERITY: 0.2,  BuildType.WELLNESS: 0.1,  BuildType.CREATIVE: 0.3,  BuildType.ENTREPRENEUR: 0.5,  BuildType.GAMER: 0.25},
-    # ── Skills ──────────────────────────────────────────────────────────────────────────────────────
+    # Skills
     "instrument_practice": {BuildType.STRENGTH: 0.15,BuildType.INTELLIGENCE: 0.4,  BuildType.DEXTERITY: 1.0,  BuildType.WELLNESS: 0.25, BuildType.CREATIVE: 0.8,  BuildType.ENTREPRENEUR: 0.15, BuildType.GAMER: 0.2 },
     "coding_sprint":       {BuildType.STRENGTH: 0.1, BuildType.INTELLIGENCE: 0.85, BuildType.DEXTERITY: 0.9,  BuildType.WELLNESS: 0.1,  BuildType.CREATIVE: 0.5,  BuildType.ENTREPRENEUR: 0.7,  BuildType.GAMER: 0.5 },
     "typing_practice":     {BuildType.STRENGTH: 0.05,BuildType.INTELLIGENCE: 0.3,  BuildType.DEXTERITY: 0.9,  BuildType.WELLNESS: 0.05, BuildType.CREATIVE: 0.2,  BuildType.ENTREPRENEUR: 0.3,  BuildType.GAMER: 0.6 },
-    # ── Wellness ────────────────────────────────────────────────────────────────────────────────────
+    # Wellness
     "meditation":          {BuildType.STRENGTH: 0.2, BuildType.INTELLIGENCE: 0.3,  BuildType.DEXTERITY: 0.2,  BuildType.WELLNESS: 1.0,  BuildType.CREATIVE: 0.3,  BuildType.ENTREPRENEUR: 0.25, BuildType.GAMER: 0.2 },
     "journaling":          {BuildType.STRENGTH: 0.1, BuildType.INTELLIGENCE: 0.5,  BuildType.DEXTERITY: 0.15, BuildType.WELLNESS: 0.8,  BuildType.CREATIVE: 0.7,  BuildType.ENTREPRENEUR: 0.4,  BuildType.GAMER: 0.2 },
     "sleep_tracking":      {BuildType.STRENGTH: 0.3, BuildType.INTELLIGENCE: 0.2,  BuildType.DEXTERITY: 0.2,  BuildType.WELLNESS: 1.0,  BuildType.CREATIVE: 0.15, BuildType.ENTREPRENEUR: 0.15, BuildType.GAMER: 0.3 },
     "nutrition_tracking":  {BuildType.STRENGTH: 0.5, BuildType.INTELLIGENCE: 0.2,  BuildType.DEXTERITY: 0.3,  BuildType.WELLNESS: 0.9,  BuildType.CREATIVE: 0.1,  BuildType.ENTREPRENEUR: 0.15, BuildType.GAMER: 0.2 },
     "cold_shower":         {BuildType.STRENGTH: 0.5, BuildType.INTELLIGENCE: 0.2,  BuildType.DEXTERITY: 0.2,  BuildType.WELLNESS: 0.8,  BuildType.CREATIVE: 0.1,  BuildType.ENTREPRENEUR: 0.2,  BuildType.GAMER: 0.2 },
-    # ── Creative ────────────────────────────────────────────────────────────────────────────────────
+    # Creative
     "art_session":         {BuildType.STRENGTH: 0.1, BuildType.INTELLIGENCE: 0.35, BuildType.DEXTERITY: 0.7,  BuildType.WELLNESS: 0.3,  BuildType.CREATIVE: 1.0,  BuildType.ENTREPRENEUR: 0.2,  BuildType.GAMER: 0.3 },
     "writing":             {BuildType.STRENGTH: 0.1, BuildType.INTELLIGENCE: 0.6,  BuildType.DEXTERITY: 0.2,  BuildType.WELLNESS: 0.2,  BuildType.CREATIVE: 1.0,  BuildType.ENTREPRENEUR: 0.7,  BuildType.GAMER: 0.3 },
     "music_production":    {BuildType.STRENGTH: 0.1, BuildType.INTELLIGENCE: 0.4,  BuildType.DEXTERITY: 0.8,  BuildType.WELLNESS: 0.2,  BuildType.CREATIVE: 1.0,  BuildType.ENTREPRENEUR: 0.2,  BuildType.GAMER: 0.2 },
     "photography":         {BuildType.STRENGTH: 0.1, BuildType.INTELLIGENCE: 0.3,  BuildType.DEXTERITY: 0.6,  BuildType.WELLNESS: 0.2,  BuildType.CREATIVE: 0.9,  BuildType.ENTREPRENEUR: 0.3,  BuildType.GAMER: 0.1 },
     "design_work":         {BuildType.STRENGTH: 0.05,BuildType.INTELLIGENCE: 0.4,  BuildType.DEXTERITY: 0.6,  BuildType.WELLNESS: 0.1,  BuildType.CREATIVE: 1.0,  BuildType.ENTREPRENEUR: 0.4,  BuildType.GAMER: 0.4 },
-    # ── Entrepreneur ────────────────────────────────────────────────────────────────────────────────
+    # Entrepreneur
     "networking":          {BuildType.STRENGTH: 0.1, BuildType.INTELLIGENCE: 0.3,  BuildType.DEXTERITY: 0.15, BuildType.WELLNESS: 0.2,  BuildType.CREATIVE: 0.2,  BuildType.ENTREPRENEUR: 1.0,  BuildType.GAMER: 0.3 },
     "business_task":       {BuildType.STRENGTH: 0.1, BuildType.INTELLIGENCE: 0.4,  BuildType.DEXTERITY: 0.2,  BuildType.WELLNESS: 0.1,  BuildType.CREATIVE: 0.25, BuildType.ENTREPRENEUR: 1.0,  BuildType.GAMER: 0.2 },
     "cold_outreach":       {BuildType.STRENGTH: 0.05,BuildType.INTELLIGENCE: 0.25, BuildType.DEXTERITY: 0.1,  BuildType.WELLNESS: 0.05, BuildType.CREATIVE: 0.15, BuildType.ENTREPRENEUR: 0.9,  BuildType.GAMER: 0.1 },
@@ -130,7 +128,7 @@ BUILD_RELEVANCE: Dict[str, Dict[BuildType, float]] = {
 PRIMARY_THRESHOLD = 0.8  # score >= this = primary activity for that build
 
 
-# ── Helper Functions ──────────────────────────────────────────────────────────
+# Helper Functions
 
 def get_relevance_score(activity_type: str, primary_build: BuildType) -> float:
     """Raw relevance score (0.0-1.0). Defaults to 0.5 for unknown activities."""
@@ -158,7 +156,7 @@ def get_badge_index_for_xp(total_xp: int) -> int:
     return earned
 
 
-def get_badge_name(build: BuildType, badge_index: int) -> Optional[str]:
+def get_badge_name(build: BuildType, badge_index: int) -> str | None:
     """Badge name at a tier index. None if not yet earned."""
     if badge_index < 0 or badge_index >= len(BADGE_TIERS[build]):
         return None

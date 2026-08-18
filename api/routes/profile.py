@@ -1,49 +1,54 @@
 """
-api/routes/profile.py
-======================
-User profile, XP logging, and build management endpoints.
+User profile, XP, and build management — everything the app needs to track a player's progress.
 
-POST /api/profile                       -- create a new user profile
-GET  /api/profile/{user_id}             -- get profile summary
-GET  /api/profile/{user_id}/context     -- full context dict for LLM system prompt
-POST /api/profile/{user_id}/log         -- log an activity → earn XP + streak update
-GET  /api/profile/{user_id}/xp/preview  -- preview XP without logging
-POST /api/profile/{user_id}/build/switch -- unlock secondary or archive+restart
+POST /api/profile                        — create a new user profile and choose a build
+GET  /api/profile/{user_id}              — get the full profile summary (XP, streak, badges)
+GET  /api/profile/{user_id}/context      — full context dict injected into the LLM system prompt
+POST /api/profile/{user_id}/log          — log a completed activity → earn XP + update streak
+GET  /api/profile/{user_id}/xp/preview   — preview XP gain before logging (for the UI)
+POST /api/profile/{user_id}/build/switch — unlock a secondary build or archive + restart
 
-Storage: JSON files in data/profiles/{user_id}.json  (no database needed for dev/exam)
+Profiles are stored as flat JSON files under data/profiles/ — no database needed
+for development or the exam demo.
 """
 
 from __future__ import annotations
 
 import json
-import os
 from datetime import date, datetime
 from pathlib import Path
-from typing import Optional
 
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
 from xp_engine import (
-    BuildType, Intensity,
-    UserState, BuildProfile, ActivityLog as EngineActivityLog,
-    calculate_xp, best_activity_for_xp,
-    BUILD_DISPLAY_NAMES, BUILD_DESCRIPTIONS,
     BADGE_TIERS,
+    BUILD_DESCRIPTIONS,
+    BUILD_DISPLAY_NAMES,
+    BuildProfile,
+    BuildType,
+    Intensity,
+    UserState,
+    best_activity_for_xp,
+    calculate_xp,
+)
+from xp_engine import (
+    ActivityLog as EngineActivityLog,
 )
 
 router = APIRouter(prefix="/api/profile", tags=["profile"])
 
-# ── Storage path ──────────────────────────────────────────────────────────────
+# Storage path
 
 ROOT         = Path(__file__).resolve().parents[2]
 PROFILES_DIR = ROOT / "data" / "profiles"
 PROFILES_DIR.mkdir(parents=True, exist_ok=True)
 
 
-# ── Helpers: persistence ──────────────────────────────────────────────────────
+# Helpers: persistence
 
 def _profile_path(user_id: str) -> Path:
+    # Strip anything that isn't alphanumeric, hyphen, or underscore to prevent path traversal
     safe = "".join(c for c in user_id if c.isalnum() or c in "-_")
     return PROFILES_DIR / f"{safe}.json"
 
@@ -113,7 +118,7 @@ def _load(user_id: str) -> tuple[UserState, list[dict]]:
     return state, logs
 
 
-# ── Request / Response schemas ────────────────────────────────────────────────
+# Request / Response schemas
 
 class CreateProfileRequest(BaseModel):
     user_id:  str = Field(..., min_length=3, max_length=32, description="Unique user ID")
@@ -131,7 +136,7 @@ class LogActivityRequest(BaseModel):
     activity_type:    str       = Field(..., description="Activity key (e.g. gym_session, reading, coding)")
     duration_minutes: int       = Field(..., ge=1, le=480, description="Session duration in minutes (1-480)")
     intensity:        str       = Field(..., description="light | moderate | intense")
-    notes:            Optional[str] = Field(None, max_length=200, description="Optional session notes")
+    notes:            str | None = Field(None, max_length=200, description="Optional session notes")
 
     model_config = {"json_schema_extra": {"example": {
         "activity_type":    "reading",
@@ -157,7 +162,7 @@ class XPPreviewRequest(BaseModel):
     intensity:        str = Field(..., description="light | moderate | intense")
 
 
-# ── Response helpers ──────────────────────────────────────────────────────────
+# Response helpers
 
 def _profile_summary(state: UserState, logs: list[dict]) -> dict:
     """Flat summary dict for the GET /profile/{id} response."""
@@ -195,7 +200,7 @@ def _profile_summary(state: UserState, logs: list[dict]) -> dict:
     }
 
 
-# ── Endpoints ─────────────────────────────────────────────────────────────────
+# Endpoints
 
 @router.post("", status_code=status.HTTP_201_CREATED, summary="Create a new user profile")
 async def create_profile(body: CreateProfileRequest):
@@ -353,7 +358,8 @@ async def log_activity(user_id: str, body: LogActivityRequest):
     if xp_update.get("badge_earned"):
         response["badge_earned"] = xp_update["badge_earned"]
 
-    # Motivational flag for chatbot tone (fire-and-forget — no model needed)
+    # Give the frontend a tone hint so the chatbot can open with the right energy
+    # This uses rule-based logic — no sentiment model needed for these clear-cut cases
     if streak_update["streak_broken"]:
         response["chatbot_hint"] = "support_mode"
     elif xp_update.get("badge_earned") or xp_result.power_up_name:

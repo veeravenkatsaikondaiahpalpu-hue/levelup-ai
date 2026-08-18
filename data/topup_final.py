@@ -1,6 +1,4 @@
 """
-topup_final.py
-==============
 Final top-up for the 4 builds still under 4000:
   SAGE    : needs 2,412 more
   PHANTOM : needs   912 more
@@ -13,7 +11,10 @@ Run:
     PYTHONPATH=. venv/Scripts/python.exe data/topup_final.py
 """
 
-import os, json, random
+import json
+import os
+import random
+
 from datasets import load_dataset
 
 TRAIN_V2 = os.path.join("data", "raw", "finetune_train_v2.jsonl")
@@ -90,9 +91,7 @@ print(f"  {len(existing_keys):,} existing unique samples")
 
 targets = {"SAGE": 2500, "PHANTOM": 1000, "TITAN": 300, "EMPIRE": 500}
 
-# ═══════════════════════════════════════════════════════════════════════════════
 # SAGE — use 3 more diverse wellness/psychology datasets
-# ═══════════════════════════════════════════════════════════════════════════════
 
 print("\n--- SAGE (need ~2,500 more) ---")
 sage_samples = []
@@ -169,9 +168,7 @@ for q, a in sage_extra:
 print(f"  SAGE total new: {len(sage_samples)}")
 append_samples(TRAIN_V2, VAL_V2, sage_samples)
 
-# ═══════════════════════════════════════════════════════════════════════════════
 # PHANTOM — sports science + movement datasets + more handcrafted
-# ═══════════════════════════════════════════════════════════════════════════════
 
 print("\n--- PHANTOM (need ~1,000 more) ---")
 phantom_samples = []
@@ -239,9 +236,7 @@ for q, a in phantom_extra:
 print(f"  PHANTOM total new: {len(phantom_samples)}")
 append_samples(TRAIN_V2, VAL_V2, phantom_samples)
 
-# ═══════════════════════════════════════════════════════════════════════════════
 # TITAN — just 300 more, filter from HealthCareMagic
-# ═══════════════════════════════════════════════════════════════════════════════
 
 print("\n--- TITAN (need ~300 more) ---")
 titan_samples = []
@@ -269,9 +264,7 @@ except Exception as e:
     print(f"  Failed: {e}")
 append_samples(TRAIN_V2, VAL_V2, titan_samples)
 
-# ═══════════════════════════════════════════════════════════════════════════════
 # EMPIRE — 500 more from finance-alpaca
-# ═══════════════════════════════════════════════════════════════════════════════
 
 print("\n--- EMPIRE (need ~500 more) ---")
 empire_samples = []
@@ -299,13 +292,14 @@ except Exception as e:
     print(f"  Failed: {e}")
 append_samples(TRAIN_V2, VAL_V2, empire_samples)
 
-# ── Final count ────────────────────────────────────────────────────────────────
+# Final count
 
 print("\n" + "=" * 60)
 print("FINAL COUNTS")
 print("=" * 60)
 
 from collections import defaultdict
+
 build_counts = defaultdict(int)
 total = 0
 with open(TRAIN_V2, encoding="utf-8") as f:

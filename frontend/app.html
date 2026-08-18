@@ -750,6 +750,17 @@ tailwind.config = {
             <p class="text-xs text-gray-500">Your personal AI mentor — powered by fine-tuned LLM</p>
           </div>
           <div class="ml-auto flex items-center gap-3">
+            <!-- Clear chat (reset conversation history — start the demo clean) -->
+            <button id="clear-chat-btn" onclick="clearChat()" title="Clear the conversation"
+              class="px-3 py-1.5 rounded-full text-xs font-bold tracking-wider border border-gray-600 text-gray-400 hover:bg-white/10 transition-all">
+              ⟲ CLEAR
+            </button>
+            <!-- Guardrail / AI-firewall toggle (Safe Mode) -->
+            <button id="firewall-toggle-btn" onclick="toggleFirewall()" title="Toggle the guardrail (AI firewall)"
+              class="px-3 py-1.5 rounded-full text-xs font-bold tracking-wider border transition-all"
+              style="border-color:#ef4444;color:#ef4444;background:rgba(239,68,68,0.1);">
+              🛡 FIREWALL: OFF
+            </button>
             <!-- TTS toggle -->
             <button id="tts-toggle-btn" onclick="toggleTTS()" title="Toggle voice responses"
               class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 transition-all">
@@ -1713,6 +1724,72 @@ function appendChatMessage(who, text, save=true) {
   el.scrollTop = el.scrollHeight;
 }
 
+// ── Guardrail / AI-firewall toggle (Safe Mode) ───────────────────────────────
+// When ON, /api/chat runs the guardrail; injection attempts are blocked and no
+// sensitive data is returned. When OFF, the model is unprotected (Case 1).
+let _firewallOn = false;
+
+function toggleFirewall() {
+  _firewallOn = !_firewallOn;
+  const btn = document.getElementById('firewall-toggle-btn');
+  if (_firewallOn) {
+    btn.textContent = '🛡 FIREWALL: ON';
+    btn.style.borderColor = '#22c55e';
+    btn.style.color = '#22c55e';
+    btn.style.background = 'rgba(34,197,94,0.12)';
+    showToast('🛡 Firewall ON — guardrail active');
+  } else {
+    btn.textContent = '🛡 FIREWALL: OFF';
+    btn.style.borderColor = '#ef4444';
+    btn.style.color = '#ef4444';
+    btn.style.background = 'rgba(239,68,68,0.1)';
+    showToast('⚠️ Firewall OFF — model unprotected');
+  }
+}
+
+// Clear the conversation — wipes history so the AI starts fresh. Useful for the
+// security demo: prior refusals in history make the model keep refusing, so reset
+// before each run to guarantee a clean single-turn attempt.
+function clearChat() {
+  state.chatHistory = [];
+  document.getElementById('chat-messages').innerHTML = '';
+  saveState();
+  initChat();
+  showToast('⟲ Conversation cleared');
+}
+
+// Render a guardrail notice (block / flag) as a distinct message in the chat.
+function appendGuardrailNotice(data) {
+  const el = document.getElementById('chat-messages');
+  const div = document.createElement('div');
+  div.className = 'chat-msg-ai';
+  div.style.borderLeftColor = '#22c55e';
+  div.style.background = 'rgba(34,197,94,0.08)';
+
+  const g = data.guardrail || {};
+  const findings = [ ...((g.input && g.input.findings) || []),
+                     ...((g.output && g.output.findings) || []) ];
+  const rules = findings.map(f => `${f.rule} [${f.severity}/${f.owasp}]`);
+  const uniq = [...new Set(rules)];
+
+  const head = document.createElement('div');
+  head.style.fontWeight = '700';
+  head.style.color = '#22c55e';
+  head.textContent = data.blocked ? '🛡 BLOCKED by guardrail' : '🛡 Guardrail flagged this';
+  div.appendChild(head);
+
+  if (uniq.length) {
+    const sub = document.createElement('div');
+    sub.style.fontSize = '11px';
+    sub.style.opacity = '0.8';
+    sub.style.marginTop = '4px';
+    sub.textContent = 'Rules: ' + uniq.join('  •  ');
+    div.appendChild(sub);
+  }
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+}
+
 function showTypingIndicator() {
   const el = document.getElementById('chat-messages');
   const div = document.createElement('div');
@@ -1922,6 +1999,10 @@ async function sendChatMessage() {
   if (!msg) return;
   input.value = '';
 
+  // Capture the PRIOR turns before adding this message — the backend appends
+  // `message` itself, so including it here too would duplicate it in the prompt.
+  const priorHistory = state.chatHistory.slice(-10);
+
   appendChatMessage('user', msg);
   state.chatHistory.push({role:'user', content:msg});
   showTypingIndicator();
@@ -1929,13 +2010,16 @@ async function sendChatMessage() {
   try {
     const res = await fetch(`${API_BASE}/api/chat`, {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({build: state.user.build, message: msg, history: state.chatHistory.slice(-10)}),
+      body: JSON.stringify({build: state.user.build, message: msg,
+                            history: priorHistory, safe_mode: _firewallOn}),
       signal: AbortSignal.timeout(90000)
     });
     removeTypingIndicator();
     if (res.ok) {
       const data = await res.json();
       const reply = data.reply || data.message || 'I hear you, warrior.';
+      // Show the guardrail's action distinctly when it blocked/flagged something.
+      if (data.blocked || data.flagged) appendGuardrailNotice(data);
       appendChatMessage('ai', reply);
       state.chatHistory.push({role:'assistant', content:reply});
       // 🔊 Speak the AI response if TTS is enabled

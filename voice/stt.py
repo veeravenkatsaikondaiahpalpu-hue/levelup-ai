@@ -1,6 +1,4 @@
 """
-voice/stt.py
-============
 Speech-to-Text using OpenAI Whisper (local, runs on CPU or GPU).
 
 Converts uploaded audio files (MP3, WAV, M4A, WebM, OGG) to text so users
@@ -21,10 +19,8 @@ from __future__ import annotations
 import os
 import tempfile
 from pathlib import Path
-from typing import Optional
 
-
-# ── Whisper model size ────────────────────────────────────────────────────────
+# Whisper model size
 # "base" is fast and accurate enough for voice commands.
 # Upgrade to "small" or "medium" if accuracy needs improvement.
 _WHISPER_MODEL_SIZE = os.getenv("WHISPER_MODEL", "base")
@@ -50,12 +46,12 @@ def _get_model():
     return _whisper_model
 
 
-# ── Core transcription ────────────────────────────────────────────────────────
+# Core transcription
 
 def transcribe_bytes(
     audio_bytes: bytes,
     file_ext:    str = ".webm",
-    language:    Optional[str] = None,
+    language:    str | None = None,
 ) -> str:
     """
     Transcribe raw audio bytes to text.
@@ -85,7 +81,7 @@ def transcribe_bytes(
 
 def transcribe_file(
     file_path: str | Path,
-    language:  Optional[str] = None,
+    language:  str | None = None,
 ) -> str:
     """
     Transcribe an audio file to text.
@@ -100,7 +96,7 @@ def transcribe_file(
     return _transcribe_path(str(file_path), language=language)
 
 
-def _transcribe_path(path: str, language: Optional[str] = None) -> str:
+def _transcribe_path(path: str, language: str | None = None) -> str:
     """Internal: run Whisper on a file path."""
     model = _get_model()
     options: dict = {"fp16": False}   # fp16=False ensures CPU compatibility
@@ -110,12 +106,12 @@ def _transcribe_path(path: str, language: Optional[str] = None) -> str:
     return result["text"].strip()
 
 
-# ── Async wrapper (for FastAPI) ───────────────────────────────────────────────
+# Async wrapper (for FastAPI)
 
 async def transcribe_bytes_async(
     audio_bytes: bytes,
     file_ext:    str = ".webm",
-    language:    Optional[str] = None,
+    language:    str | None = None,
 ) -> str:
     """
     Async wrapper — runs Whisper in a thread pool so it doesn't block
@@ -129,7 +125,7 @@ async def transcribe_bytes_async(
     )
 
 
-# ── Availability check ────────────────────────────────────────────────────────
+# Availability check
 
 def stt_available() -> bool:
     """Returns True if openai-whisper is installed."""
@@ -140,7 +136,7 @@ def stt_available() -> bool:
         return False
 
 
-# ── Quick CLI test ────────────────────────────────────────────────────────────
+# Quick CLI test
 
 if __name__ == "__main__":
     import sys

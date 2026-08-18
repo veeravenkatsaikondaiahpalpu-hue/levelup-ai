@@ -1,6 +1,4 @@
 """
-sentiment/train.py
-===================
 Entry point: train all three sentiment classifiers, then evaluate.
 
 Usage:

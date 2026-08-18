@@ -15,8 +15,10 @@ Output appended to: data/raw/finetune_train_v2.jsonl
                     data/raw/finetune_val_v2.jsonl
 """
 
-import json, csv, os, random
-from pathlib import Path
+import csv
+import json
+import os
+import random
 from collections import defaultdict
 
 random.seed(42)

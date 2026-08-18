@@ -33,8 +33,8 @@ Evaluation::
     python -m anomaly_detection.evaluate
 """
 
-from anomaly_detection.models    import AnomalyDetector, get_detector
-from anomaly_detection.data_prep import FEATURES, ANOMALY_TYPES
+from anomaly_detection.data_prep import ANOMALY_TYPES, FEATURES
+from anomaly_detection.models import AnomalyDetector, get_detector
 
 __all__ = [
     "AnomalyDetector",
