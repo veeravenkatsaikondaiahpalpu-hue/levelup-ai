@@ -399,7 +399,6 @@ def load_dnd_crd3(max_samples: int = 3000):
         for i in range(len(turns) - 1):
             t1 = turns[i]
             t2 = turns[i + 1]
-            names1 = t1.get("names", [])
             utts1  = t1.get("utterances", [])
             utts2  = t2.get("utterances", [])
             if utts1 and utts2:

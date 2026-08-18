@@ -76,4 +76,22 @@ exclude = [".venv*", "models", "data/raw", "notebooks"]
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
 # E501 off: several files use aligned comment tables that read better long.
+# B008 off: FastAPI's Depends()/File() in defaults is the documented idiom.
 ignore = ["E501", "B008"]
+
+# The shipped package is linted strictly. data/ and scripts/ are one-off
+# collection and reporting tools that are run by hand, so the style rules
+# there are relaxed rather than churning code nobody imports.
+[tool.ruff.lint.per-file-ignores]
+"data/**" = ["E701", "E702", "E731", "E402", "B007", "B905"]
+"create_tech_doc.py" = ["E701", "E702", "E402", "B007"]
+"scripts/**" = ["E701", "E702", "E731", "E402", "B007", "B905"]
+"notebooks/**" = ["E402", "F401"]
+"tests/**" = ["E402"]
+# These modules add the project root to sys.path before importing siblings,
+# so their imports legitimately come after executable code.
+"chatbot/fine_tuning/*.py" = ["E402"]
+"chatbot/inference.py" = ["E402"]
+"chatbot/vision_inference.py" = ["E402"]
+"chatbot/ollama_inference.py" = ["E402"]
+"spaces/backend/app.py" = ["E402"]

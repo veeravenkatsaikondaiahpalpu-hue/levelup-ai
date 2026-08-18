@@ -185,7 +185,7 @@ class Guardrail:
         """Yield free-text string values from user_context that could carry an
         injected instruction (e.g. journal notes, custom activity names). Numeric
         stats are ignored — only text is an injection surface."""
-        for key, val in ctx.items():
+        for _key, val in ctx.items():
             if isinstance(val, str) and len(val) > 3:
                 yield val
             elif isinstance(val, list):

@@ -1,6 +1,4 @@
 """
-scripts/guardrail_demo.py
-=========================
 Safe, offline demo of the LevelUp guardrail for the IT-Security presentation.
 
 It walks through the "what / how / prevent" structure from the proposal using a
@@ -35,8 +33,8 @@ except Exception:
 
 from chatbot.guardrails import Guardrail
 
-# ── tiny terminal helpers (no dependencies) ───────────────────────────────────
 
+# tiny terminal helpers (no dependencies)
 def _c(code: str, text: str) -> str:
     return f"\033[{code}m{text}\033[0m"
 
@@ -68,7 +66,7 @@ def show_findings(verdict) -> None:
         print(f"      {DIM('match:')} {f.snippet!r}")
 
 
-# ── scenarios ─────────────────────────────────────────────────────────────────
+# scenarios
 # Each scenario is (title, message, history, user_context, faux_model_reply).
 # faux_model_reply simulates what an UNPROTECTED model might emit once injected,
 # so the output-scan half of the demo works without a GPU.
@@ -115,13 +113,13 @@ def run_scenario(guard: Guardrail, key: str, use_model: bool) -> None:
     sc = SCENARIOS[key]
     rule(sc["title"])
 
-    # ── WHAT the model would receive ──────────────────────────────────────────
+    # WHAT the model would receive
     print(BOLD("\n  Untrusted input reaching the model:"))
     print(f"    user message : {sc['message']!r}")
     if sc["user_context"]:
         print(f"    ingested data: {YELL('(contains a hidden instruction)')}")
 
-    # ── PREVENT (input side) ──────────────────────────────────────────────────
+    # PREVENT (input side)
     print(BOLD("\n  [Guardrail] INPUT scan:"))
     in_verdict = guard.check_input(
         sc["message"], history=sc["history"], user_context=sc["user_context"],
@@ -137,7 +135,7 @@ def run_scenario(guard: Guardrail, key: str, use_model: bool) -> None:
     # show the OUTPUT scan catching the symptom instead.
     print(YELL("\n  → input allowed through; relying on OUTPUT scan as second layer."))
 
-    # ── HOW it fails without a guardrail, and PREVENT (output side) ────────────
+    # HOW it fails without a guardrail, and PREVENT (output side)
     reply = sc["faux_reply"]
     if use_model:
         reply = _try_real_model(sc) or reply

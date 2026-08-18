@@ -239,7 +239,7 @@ def load_jsonl(path):
             if line:
                 try:
                     samples.append(json.loads(line))
-                except:
+                except Exception:
                     pass
     return samples
 
@@ -327,7 +327,7 @@ def hf_topup(build, ds_name, split, extractor, keywords=None, max_samples=2000):
             if count >= min(needed + 200, max_samples): break
             try:
                 q, a = extractor(row)
-            except:
+            except Exception:
                 continue
             q, a = str(q).strip(), str(a).strip()
             if not q or not a or len(a) < 60: continue

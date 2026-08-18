@@ -208,7 +208,9 @@ def main():
         results["training"] = True
     except Exception as e:
         print(f"  {FAIL} Training FAILED: {e}")
-        import traceback; traceback.print_exc()
+        import traceback
+
+        traceback.print_exc()
         results["training"] = False
 
     # [6] Save adapter
@@ -234,7 +236,9 @@ def main():
         )
         reloaded = PeftModel.from_pretrained(base2, FINAL_DIR)
         reloaded.eval()
-        tok2 = AutoTokenizer.from_pretrained(FINAL_DIR)
+        # Loading is the assertion here: it fails loudly if the tokenizer
+        # wasn't saved alongside the adapter.
+        AutoTokenizer.from_pretrained(FINAL_DIR)
         print(f"  Reloaded    : OK ({sum(p.numel() for p in reloaded.parameters())/1e9:.2f}B params)")
         print(f"  {PASS} Save/reload OK")
         results["save"] = True

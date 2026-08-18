@@ -39,7 +39,7 @@ def _get_model():
             raise RuntimeError(
                 "openai-whisper not installed. "
                 "Run: pip install openai-whisper"
-            )
+            ) from None
         print(f"[STT] Loading Whisper {_WHISPER_MODEL_SIZE} model ...")
         _whisper_model = whisper.load_model(_WHISPER_MODEL_SIZE)
         print("[STT] Whisper ready.")

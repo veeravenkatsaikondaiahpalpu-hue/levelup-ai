@@ -87,12 +87,12 @@ def _get_analyzer():
                     f"Sentiment models not found. "
                     f"Run `python -m sentiment.train` first. ({e})"
                 ),
-            )
+            ) from e
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail=f"Could not load sentiment analyzer: {e}",
-            )
+            ) from e
     return _analyzer
 
 

@@ -188,9 +188,8 @@ def gen_anomaly_intensity_spoofing() -> LogRecord:
     num_sessions = random.randint(4, 8)
     durations    = [random.randint(10, 30) for _ in range(num_sessions)]
 
-    # Alternates light → intense → light → intense... to game the multiplier
-    intensities  = ["light" if j % 2 == 0 else "intense" for j in range(num_sessions)]
-    # XP calculated as if all intense
+    # The spoof pattern alternates light/intense to game the multiplier, but XP
+    # is calculated as if every session were intense.
     daily_xp     = sum(calc_xp(d, "intense") for d in durations)
     capped_xp    = min(daily_xp, DAILY_CAP)
 

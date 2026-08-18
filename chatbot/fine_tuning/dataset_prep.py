@@ -134,7 +134,7 @@ def get_build_counts(path: Path = TRAIN_PATH) -> dict[str, int]:
                 s = json.loads(line)
                 build = detect_build(s.get("system", "")) or "UNKNOWN"
                 counts[build] += 1
-            except:
+            except Exception:
                 pass
     return dict(counts)
 

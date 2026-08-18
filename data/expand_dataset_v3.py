@@ -172,7 +172,7 @@ def load_existing_keys(train_path: str, val_path: str) -> set:
                     try:
                         s = json.loads(line)
                         keys.add(s.get("user", "")[:120])
-                    except:
+                    except Exception:
                         pass
     print(f"  Loaded {len(keys):,} existing dedup keys")
     return keys
@@ -234,7 +234,7 @@ def collect_mathdial(staging_path: str, seen: set) -> dict:
             for line in f:
                 try:
                     item = json.loads(line)
-                except:
+                except Exception:
                     continue
                 question = item.get("question", "").strip()
                 ground_truth = item.get("ground_truth", "").strip()
@@ -673,7 +673,7 @@ def main():
                         if b in sys_p or b.lower() in sys_p.lower():
                             existing_counts[b] += 1
                             break
-                except:
+                except Exception:
                     pass
     print("\nExisting train counts (approx):")
     for b in SYSTEM_PROMPTS:

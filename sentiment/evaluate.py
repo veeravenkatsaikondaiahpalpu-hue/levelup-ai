@@ -90,7 +90,7 @@ def evaluate_all(data_path: str = DATA_PATH, model_dir: str = MODEL_DIR) -> list
             print(f"    {lbl:<12}  F1={f1:.4f}  P={prec:.4f}  R={rec:.4f}")
 
         print("\n  Confusion Matrix (rows=actual, cols=predicted):")
-        header = "".join(f"{l:>12}" for l in LABELS)
+        header = "".join(f"{label:>12}" for label in LABELS)
         print(f"  {'':>12}{header}")
         for i, row in enumerate(cm):
             vals = "".join(f"{v:>12}" for v in row)
@@ -130,6 +130,8 @@ if __name__ == "__main__":
     data_path = DATA_PATH
     model_dir = MODEL_DIR
     args = sys.argv[1:]
-    if "--data"   in args: data_path = args[args.index("--data")   + 1]
-    if "--models" in args: model_dir = args[args.index("--models") + 1]
+    if "--data" in args:
+        data_path = args[args.index("--data") + 1]
+    if "--models" in args:
+        model_dir = args[args.index("--models") + 1]
     evaluate_all(data_path=data_path, model_dir=model_dir)

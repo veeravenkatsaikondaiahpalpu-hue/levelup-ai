@@ -25,8 +25,8 @@ from sklearn.model_selection import train_test_split
 # Label definitions
 
 LABELS      = ["neutral", "motivated", "struggling"]
-LABEL_TO_INT = {l: i for i, l in enumerate(LABELS)}
-INT_TO_LABEL = {i: l for l, i in LABEL_TO_INT.items()}
+LABEL_TO_INT = {label: i for i, label in enumerate(LABELS)}
+INT_TO_LABEL = {i: label for label, i in LABEL_TO_INT.items()}
 
 
 # Text cleaning
@@ -209,7 +209,6 @@ def fit_dual_vectorizer(
         word_max_features=word_max_features,
         char_max_features=char_max_features,
     )
-    dv.fit_transform  # just initialise — actual fitting in fit_transform below
     if save_path:
         os.makedirs(os.path.dirname(save_path), exist_ok=True)
 

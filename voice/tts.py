@@ -305,7 +305,7 @@ def text_to_audio_bytes(
         raise RuntimeError(
             "elevenlabs package not installed. "
             "Run: pip install elevenlabs"
-        )
+        ) from None
 
     profile = get_profile(build)
 
@@ -387,6 +387,19 @@ def list_profiles() -> dict[str, dict]:
 # python -m voice.tts GG "bro that was CRACKED, no cap GG EZ"
 # python -m voice.tts SAGE "Breathe. Notice the stillness inside you."
 
+# Default demo texts that match each build's voice/tone. Must be defined before
+# the __main__ block below, which reads it when no text argument is given.
+_DEFAULT_TEXTS: dict[str, str] = {
+    "TITAN":   "You plateaued because you got comfortable. That ends today. Add weight. Add reps. No excuses.",
+    "ORACLE":  "The key insight here is that compound interest applies to knowledge, not just capital. Every concept you master accelerates every future concept.",
+    "PHANTOM": "Flow isn't found, it's built — movement by movement, until your body stops asking permission.",
+    "SAGE":    "Breathe. Notice the tension you've been carrying. Allow it to soften, just a little, with each exhale.",
+    "MUSE":    "Your creative block isn't a wall, it's a doorway you haven't tried opening sideways yet.",
+    "EMPIRE":  "Execution is the only strategy that matters. Ideas are free. Results cost everything.",
+    "GG":      "bro that ranked game was CRACKED, no cap GG EZ you're built different fr fr",
+}
+
+
 if __name__ == "__main__":
     import sys
 
@@ -408,18 +421,6 @@ if __name__ == "__main__":
         out_path = f"test_{build.lower()}.mp3"
         with open(out_path, "wb") as f:
             f.write(audio)
-        print(f"✅  Saved {len(audio):,} bytes → {out_path}")
+        print(f"Saved {len(audio):,} bytes -> {out_path}")
     except Exception as e:
-        print(f"❌  TTS error: {e}")
-
-
-# Default demo texts that match each build's voice/tone
-_DEFAULT_TEXTS: dict[str, str] = {
-    "TITAN":   "You plateaued because you got comfortable. That ends today. Add weight. Add reps. No excuses.",
-    "ORACLE":  "The key insight here is that compound interest applies to knowledge, not just capital. Every concept you master accelerates every future concept.",
-    "PHANTOM": "Flow isn't found, it's built — movement by movement, until your body stops asking permission.",
-    "SAGE":    "Breathe. Notice the tension you've been carrying. Allow it to soften, just a little, with each exhale.",
-    "MUSE":    "Your creative block isn't a wall, it's a doorway you haven't tried opening sideways yet.",
-    "EMPIRE":  "Execution is the only strategy that matters. Ideas are free. Results cost everything.",
-    "GG":      "bro that ranked game was CRACKED, no cap GG EZ you're built different fr fr",
-}
+        print(f"TTS error: {e}")

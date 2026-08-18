@@ -15,8 +15,10 @@ MODEL_DIR = os.path.join(ROOT, "models", "sentiment")
 
 if __name__ == "__main__":
     args = sys.argv[1:]
-    if "--data"  in args: DATA_PATH = args[args.index("--data")  + 1]
-    if "--out"   in args: MODEL_DIR = args[args.index("--out")   + 1]
+    if "--data" in args:
+        DATA_PATH = args[args.index("--data") + 1]
+    if "--out" in args:
+        MODEL_DIR = args[args.index("--out") + 1]
 
     print("=" * 64)
     print("  LevelUp Sentiment Analysis - Training Pipeline (6 models)")

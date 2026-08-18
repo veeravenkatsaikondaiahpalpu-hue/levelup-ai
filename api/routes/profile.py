@@ -220,7 +220,7 @@ async def create_profile(body: CreateProfileRequest):
         raise HTTPException(
             status_code=400,
             detail=f"Unknown build '{body.build}'. Choose from: {valid}",
-        )
+        ) from None
 
     # Check if profile already exists
     if _profile_path(body.user_id).exists():
@@ -297,7 +297,7 @@ async def log_activity(user_id: str, body: LogActivityRequest):
         raise HTTPException(
             status_code=400,
             detail=f"Invalid intensity '{body.intensity}'. Use: light | moderate | intense",
-        )
+        ) from None
 
     # Calculate XP
     xp_result = calculate_xp(
@@ -379,7 +379,7 @@ async def preview_xp(user_id: str, activity_type: str, duration_minutes: int, in
     try:
         intensity_enum = Intensity(intensity.lower())
     except ValueError:
-        raise HTTPException(400, detail="intensity must be light | moderate | intense")
+        raise HTTPException(400, detail="intensity must be light | moderate | intense") from None
 
     result = calculate_xp(
         activity_type    = activity_type,
@@ -453,7 +453,7 @@ async def switch_build(user_id: str, body: BuildSwitchRequest):
     try:
         new_build = BuildType(body.new_build.lower())
     except ValueError:
-        raise HTTPException(400, detail=f"Unknown build '{body.new_build}'")
+        raise HTTPException(400, detail=f"Unknown build '{body.new_build}'") from None
 
     if body.mode == "secondary":
         result = state.unlock_secondary_build(new_build)

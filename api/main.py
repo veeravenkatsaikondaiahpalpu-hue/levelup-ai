@@ -23,6 +23,11 @@ from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from api.logging_config import setup_logging
+from api.routes.activity import router as activity_router
+from api.routes.chat import router as chat_router
+from api.routes.profile import router as profile_router
+from api.routes.sentiment import router as sentiment_router
+from api.routes.vision import router as vision_router
 
 setup_logging()
 logger = logging.getLogger(__name__)
@@ -123,12 +128,6 @@ app.add_middleware(
 
 # Routers
 
-from api.routes.activity import router as activity_router
-from api.routes.chat import router as chat_router
-from api.routes.profile import router as profile_router
-from api.routes.sentiment import router as sentiment_router
-from api.routes.vision import router as vision_router
-
 app.include_router(chat_router)
 app.include_router(vision_router)
 app.include_router(activity_router)
@@ -225,7 +224,7 @@ async def text_to_speech(request: Request):
     try:
         from voice.tts import speak_async, tts_available
     except ImportError as e:
-        raise HTTPException(status_code=500, detail=f"TTS module error: {e}")
+        raise HTTPException(status_code=500, detail=f"TTS module error: {e}") from e
 
     if not tts_available():
         raise HTTPException(
@@ -237,7 +236,7 @@ async def text_to_speech(request: Request):
         audio_bytes = await speak_async(text, build=build)
         return Response(content=audio_bytes, media_type="audio/mpeg")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"TTS failed: {e}")
+        raise HTTPException(status_code=500, detail=f"TTS failed: {e}") from e
 
 
 @app.post("/api/stt", tags=["voice"])
@@ -254,7 +253,7 @@ async def speech_to_text(file: UploadFile = File(...)):
     try:
         from voice.stt import stt_available, transcribe_bytes_async
     except ImportError as e:
-        raise HTTPException(status_code=500, detail=f"STT module error: {e}")
+        raise HTTPException(status_code=500, detail=f"STT module error: {e}") from e
 
     if not stt_available():
         raise HTTPException(
@@ -272,7 +271,7 @@ async def speech_to_text(file: UploadFile = File(...)):
         text = await transcribe_bytes_async(audio_bytes, file_ext=ext)
         return {"text": text.strip()}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"STT failed: {e}")
+        raise HTTPException(status_code=500, detail=f"STT failed: {e}") from e
 
 
 # Dev server

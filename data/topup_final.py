@@ -60,7 +60,7 @@ def load_existing_keys(path):
             try:
                 s = json.loads(line)
                 keys.add(s.get("user","")[:120])
-            except:
+            except Exception:
                 pass
     return keys
 
@@ -126,7 +126,7 @@ for ds_name, split, extractor in sage_hf_sources:
             if len(sage_samples) >= targets["SAGE"]: break
             try:
                 q, a = extractor(row)
-            except: continue
+            except Exception: continue
             q, a = str(q).strip(), str(a).strip()
             if not q or not a or len(a) < 60: continue
             # Use full text as key for less aggressive dedup
@@ -195,7 +195,7 @@ for ds_name, split, extractor in phantom_hf:
             if len(phantom_samples) >= targets["PHANTOM"]: break
             try:
                 q, a = extractor(row)
-            except: continue
+            except Exception: continue
             q, a = str(q).strip(), str(a).strip()
             if not q or not a or len(a) < 60: continue
             key = q[:120]
@@ -314,7 +314,7 @@ with open(TRAIN_V2, encoding="utf-8") as f:
             else:
                 build_counts["GENERIC"] += 1
             total += 1
-        except: pass
+        except Exception: pass
 
 print(f"{'Build':<12} {'Train Samples':>14}  Status")
 print("-" * 40)

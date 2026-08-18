@@ -1,6 +1,4 @@
 """
-scripts/echoleak_demo.py
-========================
 EchoLeak (CVE-2025-32711), reproduced in the LevelUp sandbox — then stopped.
 
 This is the main presentation demo. It does two runs of the SAME attack:
@@ -47,8 +45,8 @@ except Exception:
 from chatbot.guardrails import Guardrail
 from chatbot.system_prompt import build_system_prompt
 
-# ── terminal helpers (no dependencies) ────────────────────────────────────────
 
+# terminal helpers (no dependencies)
 def _c(code, s): return f"\033[{code}m{s}\033[0m"
 BOLD  = lambda s: _c("1", s)
 DIM   = lambda s: _c("2", s)
@@ -81,7 +79,7 @@ def wait():
             pass
 
 
-# ── The attack setup (shared by both runs) ────────────────────────────────────
+# The attack setup (shared by both runs)
 # The hidden instruction is written to look like an ordinary human-facing note —
 # exactly the trick that let EchoLeak slip past Microsoft's XPIA filter. It is a
 # harmless string here; it does not do anything on its own.
@@ -110,7 +108,7 @@ def poisoned_context() -> dict:
         "recent_logs": [
             {"activity": "bench_press", "duration": 60, "intensity": "intense",
              "xp": 120, "logged_at": "2026-07-05T09:00:00"},
-            # ── the attacker's planted entry (arrives via a shared challenge / import) ──
+            # the attacker's planted entry (arrives via a shared challenge / import)
             {"activity": hidden, "duration": 45, "intensity": "moderate",
              "xp": 90, "logged_at": "2026-07-04T18:00:00"},
         ],
@@ -129,8 +127,7 @@ def unprotected_model_reply(ctx: dict) -> str:
     )
 
 
-# ── PART A: the attack, with NO guardrail ─────────────────────────────────────
-
+# PART A: the attack, with NO guardrail
 def run_unprotected():
     hr("PART A — ECHOLEAK WITH NO GUARDRAIL  (this is what happened to Copilot)")
     ctx = poisoned_context()
@@ -173,8 +170,7 @@ def run_unprotected():
     wait()
 
 
-# ── PART B: the SAME attack, WITH the proposed guardrail ──────────────────────
-
+# PART B: the SAME attack, WITH the proposed guardrail
 def run_protected():
     hr("PART B — THE SAME ATTACK, WITH THE PROPOSED GUARDRAIL", color=GREEN)
     guard = Guardrail()
@@ -219,8 +215,7 @@ def _show(verdict):
     print(f"    {BOLD('action:')} {verdict.action}   ({verdict.reason})")
 
 
-# ── The four locks EchoLeak picked, mapped to our guardrail ───────────────────
-
+# The four locks EchoLeak picked, mapped to our guardrail
 def show_lock_mapping():
     hr("WHY IT WORKED THEN vs. WHY IT'S STOPPED NOW — the four locks")
     rows = [

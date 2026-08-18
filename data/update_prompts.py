@@ -1,6 +1,4 @@
 """
-data/update_prompts.py
-======================
 Regenerates FINETUNE_SYSTEM_PROMPTS in chatbot/prompt_template.py by reading
 all handcrafted Q&A examples from the CSV and embedding them as few-shot examples
 directly into each persona's system prompt.
@@ -114,7 +112,7 @@ for build in build_order:
 with open('chatbot/prompt_template.py', encoding='utf-8') as f:
     content = f.read()
 
-PREAMBLE_END    = '\n# ── Build → system prompt mapping'
+PREAMBLE_END    = '\n# Build → system prompt mapping'
 POSTAMBLE_START = '\n# Detect which build'
 
 preamble_idx  = content.find(PREAMBLE_END)
@@ -129,7 +127,7 @@ postamble = content[postamble_idx:]
 # Generate the new FINETUNE_SYSTEM_PROMPTS dict using triple-quoted strings.
 # Triple-quotes mean literal newlines are fine — no re.sub() mangling, no escaping headaches.
 lines = []
-lines.append('\n# ── Build → system prompt mapping ─────────────────────────────────────────────────')
+lines.append('\n# Build → system prompt mapping')
 lines.append('# Canonical few-shot system prompts used by both the LoRA model and the Ollama fallback.')
 lines.append('# The richer runtime prompts (with live user stats) live in system_prompt.py.')
 lines.append('')
@@ -151,7 +149,7 @@ with open('chatbot/prompt_template.py', 'w', encoding='utf-8') as f:
 
 print("Updated chatbot/prompt_template.py")
 
-# ── Verify the file is valid Python and has the right content ─────────────────
+# Verify the file is valid Python and has the right content
 import importlib.util
 
 spec = importlib.util.spec_from_file_location("pt", "chatbot/prompt_template.py")

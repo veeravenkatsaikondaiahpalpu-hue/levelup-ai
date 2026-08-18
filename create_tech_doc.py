@@ -14,7 +14,7 @@ from docx.shared import Inches, Pt, RGBColor
 
 OUTPUT = r"C:\Users\veera\Desktop\Biuld URself\LevelUp_Technical_Concepts.docx"
 
-# ── Colours ──────────────────────────────────────────────────────────────────
+# Colours
 ACCENT     = RGBColor(0x2E, 0x5F, 0xA3)   # blue
 DARK_BLUE  = RGBColor(0x1F, 0x38, 0x64)
 GRAY       = RGBColor(0x59, 0x59, 0x59)
@@ -29,19 +29,19 @@ DARK_BLUE_HEX   = "1F3864"
 
 doc = Document()
 
-# ── Page setup ────────────────────────────────────────────────────────────────
+# Page setup
 section = doc.sections[0]
 section.page_width  = Inches(8.5)
 section.page_height = Inches(11)
 section.left_margin = section.right_margin = Inches(1)
 section.top_margin  = section.bottom_margin = Inches(1)
 
-# ── Default font ─────────────────────────────────────────────────────────────
+# Default font
 style = doc.styles['Normal']
 style.font.name = 'Calibri'
 style.font.size = Pt(11)
 
-# ── Helper: set cell background ───────────────────────────────────────────────
+# Helper: set cell background
 def set_cell_bg(cell, hex_color):
     tc = cell._tc
     tcPr = tc.get_or_add_tcPr()
@@ -64,7 +64,7 @@ def set_cell_borders(cell, color="CCCCCC"):
         tcBorders.append(border)
     tcPr.append(tcBorders)
 
-# ── Helper: paragraph with run ───────────────────────────────────────────────
+# Helper: paragraph with run
 def add_para(text="", bold=False, italic=False, size=11, color=None,
              font="Calibri", align=WD_ALIGN_PARAGRAPH.LEFT,
              space_before=4, space_after=4):
@@ -166,7 +166,7 @@ def add_qa(q, a):
     r2.font.name = 'Calibri'
     r2.font.size = Pt(11)
 
-# ── Table factory ─────────────────────────────────────────────────────────────
+# Table factory
 def add_table(col_widths_inches, headers, rows):
     n = len(headers)
     tbl = doc.add_table(rows=1 + len(rows), cols=n)
@@ -211,7 +211,7 @@ def add_table(col_widths_inches, headers, rows):
     add_spacer()
     return tbl
 
-# ── Header / Footer ───────────────────────────────────────────────────────────
+# Header / Footer
 def setup_header_footer():
     sec = doc.sections[0]
     # Header
@@ -259,10 +259,7 @@ def setup_header_footer():
     r2.font.name = 'Calibri'; r2.font.size = Pt(9); r2.font.color.rgb = GRAY
 
 setup_header_footer()
-
-# ═══════════════════════════════════════════════════════════════════════════════
 # TITLE PAGE
-# ═══════════════════════════════════════════════════════════════════════════════
 add_spacer(); add_spacer(); add_spacer()
 p = add_para("LevelUp AI", bold=True, size=32, color=ACCENT, font="Cambria",
              align=WD_ALIGN_PARAGRAPH.CENTER, space_before=20, space_after=6)
@@ -272,10 +269,7 @@ add_para("Applied AI Exam  |  SRH Stuttgart  |  Team Project", italic=True,
          size=13, color=GRAY, align=WD_ALIGN_PARAGRAPH.CENTER, space_before=4, space_after=4)
 add_spacer(); add_spacer()
 doc.add_page_break()
-
-# ═══════════════════════════════════════════════════════════════════════════════
 # SECTION 1: PROJECT OVERVIEW
-# ═══════════════════════════════════════════════════════════════════════════════
 add_heading1("1.  Project Overview")
 add_body("LevelUp AI is an RPG-themed self-improvement app where users pick a 'build' (character class) and receive personalised coaching from a fine-tuned AI chatbot. The professor will ask about build-related activities — exercise, meditation, gaming, creative work, studying.")
 add_spacer()
@@ -304,10 +298,7 @@ add_bullet("Local fallback:  Ollama running llama3.2")
 add_bullet("Hardware:  NVIDIA RTX 4060 Laptop GPU — 8 GB VRAM, CUDA 13.1, 16 GB RAM")
 add_spacer()
 doc.add_page_break()
-
-# ═══════════════════════════════════════════════════════════════════════════════
 # SECTION 2: DATASET COLLECTION
-# ═══════════════════════════════════════════════════════════════════════════════
 add_heading1("2.  Dataset Collection & Sources")
 add_body("22 public HuggingFace datasets + 1 in-house handcrafted dataset were collected and mapped to each build persona. All saved in data/raw/datasets/.")
 add_spacer()
@@ -339,10 +330,7 @@ add_bullet("Validation set:   19,154 samples  (finetune_val.jsonl)")
 add_bullet("Gold standard:    39 handcrafted Q&A pairs  (11_15_handcrafted_build_qa.csv)")
 add_spacer()
 doc.add_page_break()
-
-# ═══════════════════════════════════════════════════════════════════════════════
 # SECTION 3: DATA CLEANING
-# ═══════════════════════════════════════════════════════════════════════════════
 add_heading1("3.  Data Cleaning Pipeline")
 add_body("All raw CSVs went through a 7-step cleaning pipeline before conversion to JSONL training format.")
 add_spacer()
@@ -392,10 +380,7 @@ add_body("Final JSONL format (one JSON object per line):", bold=True)
 add_code('{"system": "You are TITAN...", "user": "How do I build muscle fast?", "assistant": "Progressive overload..."}')
 add_spacer()
 doc.add_page_break()
-
-# ═══════════════════════════════════════════════════════════════════════════════
 # SECTION 4: EDA
-# ═══════════════════════════════════════════════════════════════════════════════
 add_heading1("4.  EDA — Exploratory Data Analysis")
 add_spacer()
 
@@ -439,10 +424,7 @@ add_spacer()
 add_body("Solution:  Few-shot prompting at inference time — inject all 39 handcrafted Q&A examples into the system prompt so the model reproduces the exact XP/streak/build-reference style on every response.", bold=True)
 add_spacer()
 doc.add_page_break()
-
-# ═══════════════════════════════════════════════════════════════════════════════
 # SECTION 5: BASE MODEL
-# ═══════════════════════════════════════════════════════════════════════════════
 add_heading1("5.  Base Model Selection")
 add_body("Base Model:  unsloth/Llama-3.2-3B-Instruct", bold=True)
 add_body("Meta LLaMA 3.2 — 3 billion parameters, instruction-tuned variant, open weights")
@@ -469,10 +451,7 @@ add_spacer()
 add_body("The <|eot_id|> (End-of-Turn) token at the end of the assistant reply teaches the model WHEN TO STOP generating. Without it, the model continues producing random text after finishing the answer.")
 add_spacer()
 doc.add_page_break()
-
-# ═══════════════════════════════════════════════════════════════════════════════
 # SECTION 6: QLoRA
-# ═══════════════════════════════════════════════════════════════════════════════
 add_heading1("6.  Fine-Tuning — QLoRA Explained")
 add_spacer()
 
@@ -521,10 +500,7 @@ add_bullet("gate_proj, up_proj, down_proj  =  Feed-forward MLP layers. Controls 
 add_body("Training all 7 module types gives full coverage of the transformer's core computation — both attention and reasoning.")
 add_spacer()
 doc.add_page_break()
-
-# ═══════════════════════════════════════════════════════════════════════════════
 # SECTION 7: TRAINING CONFIG
-# ═══════════════════════════════════════════════════════════════════════════════
 add_heading1("7.  Training Configuration")
 add_body("Training used TRL's SFTTrainer (Supervised Fine-Tuning Trainer) with PEFT's LoRA integration.")
 add_spacer()
@@ -571,10 +547,7 @@ add_bullet("Training done on cloud GPU (Kaggle/Google Colab with T4 16 GB or A10
 add_bullet("Only the adapter weights (~300 MB) were downloaded — not the 6 GB base model")
 add_spacer()
 doc.add_page_break()
-
-# ═══════════════════════════════════════════════════════════════════════════════
 # SECTION 8: LORA ADAPTER
-# ═══════════════════════════════════════════════════════════════════════════════
 add_heading1("8.  The LoRA Adapter — What Is Saved")
 add_body("After training, only the LoRA adapter weights are saved — NOT the full 3B model. Adapter size: ~300 MB vs ~6 GB for the full model.")
 add_spacer()
@@ -600,10 +573,7 @@ add_numbered("Set eval mode:  model.eval()  (disables dropout for inference)")
 add_numbered("Generate responses using model.generate()")
 add_spacer()
 doc.add_page_break()
-
-# ═══════════════════════════════════════════════════════════════════════════════
 # SECTION 9: FEW-SHOT PROMPTING
-# ═══════════════════════════════════════════════════════════════════════════════
 add_heading1("9.  Prompt Engineering — Few-Shot Prompting")
 add_spacer()
 
@@ -653,10 +623,7 @@ add_table(
 add_body("Professor requirement:  60-70%  ROUGE-L     Achieved:  92.6%  —  exceeded by +22.6 percentage points", bold=True)
 add_spacer()
 doc.add_page_break()
-
-# ═══════════════════════════════════════════════════════════════════════════════
 # SECTION 10: INFERENCE PIPELINE
-# ═══════════════════════════════════════════════════════════════════════════════
 add_heading1("10.  Inference Pipeline — Full Request Flow")
 add_body("Complete sequence of events when a user sends a message to the chatbot:")
 add_spacer()
@@ -714,10 +681,7 @@ add_heading2("Step 8 — Frontend displays reply")
 add_body("React Native receives the JSON and renders the reply in the chat UI, styled with the build's colour theme and persona avatar.")
 add_spacer()
 doc.add_page_break()
-
-# ═══════════════════════════════════════════════════════════════════════════════
 # SECTION 11: BACKEND ARCHITECTURE
-# ═══════════════════════════════════════════════════════════════════════════════
 add_heading1("11.  Backend Architecture — FastAPI")
 add_body("Framework: FastAPI  |  Server: Uvicorn (ASGI)  |  Port: 8002")
 add_spacer()
@@ -750,10 +714,7 @@ add_spacer()
 add_body("Why singleton?  Loading a 3B model takes 10-30 seconds and uses 6 GB VRAM. Reloading on every request would make the API completely unusable.")
 add_spacer()
 doc.add_page_break()
-
-# ═══════════════════════════════════════════════════════════════════════════════
 # SECTION 12: HARDWARE & DEPLOYMENT
-# ═══════════════════════════════════════════════════════════════════════════════
 add_heading1("12.  Hardware & Deployment")
 add_spacer()
 
@@ -796,10 +757,7 @@ add_bullet("GPUs: NVIDIA T4 (16 GB) or A100 (40 GB)")
 add_bullet("Only the adapter weights (~300 MB) were downloaded after training")
 add_spacer()
 doc.add_page_break()
-
-# ═══════════════════════════════════════════════════════════════════════════════
 # SECTION 13: EVALUATION
-# ═══════════════════════════════════════════════════════════════════════════════
 add_heading1("13.  Evaluation — Measuring Chatbot Quality")
 add_spacer()
 
@@ -842,10 +800,7 @@ add_table(
     ]
 )
 doc.add_page_break()
-
-# ═══════════════════════════════════════════════════════════════════════════════
 # SECTION 14: GLOSSARY
-# ═══════════════════════════════════════════════════════════════════════════════
 add_heading1("14.  Key Technical Terms Glossary")
 add_spacer()
 add_table(
@@ -887,10 +842,7 @@ add_table(
     ]
 )
 doc.add_page_break()
-
-# ═══════════════════════════════════════════════════════════════════════════════
 # SECTION 15: EXAM Q&A
-# ═══════════════════════════════════════════════════════════════════════════════
 add_heading1("15.  Common Exam Questions & Model Answers")
 add_spacer()
 
@@ -929,6 +881,6 @@ p = add_para("LevelUp AI — Applied AI Exam Project  |  SRH Stuttgart  |  2026"
              italic=True, size=9, color=GRAY, align=WD_ALIGN_PARAGRAPH.CENTER,
              space_before=12, space_after=4)
 
-# ── Save ─────────────────────────────────────────────────────────────────────
+# Save
 doc.save(OUTPUT)
 print(f"Saved: {OUTPUT}")

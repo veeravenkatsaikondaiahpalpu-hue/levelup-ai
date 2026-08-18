@@ -166,7 +166,8 @@ def train(
     # Also keep legacy single vectoriser for backwards compatibility
     from sentiment.data_prep import fit_vectorizer
     legacy_vec_path = os.path.join(model_dir, "tfidf_vectorizer.joblib")
-    lv = fit_vectorizer(train_texts, save_path=legacy_vec_path)
+    # Called for the side effect: it writes the vectoriser to legacy_vec_path.
+    fit_vectorizer(train_texts, save_path=legacy_vec_path)
 
     # Build base classifiers
     lr = LogisticRegression(

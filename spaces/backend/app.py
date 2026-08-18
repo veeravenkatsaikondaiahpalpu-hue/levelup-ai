@@ -211,7 +211,7 @@ async def chat_endpoint(request: Request):
         reply = _run_inference(sys_prompt, history, message)
         return JSONResponse({"reply": reply, "build": build})
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 # /api/activity/check
@@ -248,7 +248,7 @@ async def sentiment_endpoint(request: Request):
         result = _sentiment_model.analyze(text)
         return JSONResponse(result)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 # /api/tts
@@ -267,7 +267,7 @@ async def tts_endpoint(request: Request):
         audio_bytes = await speak_async(text, build=build)
         return Response(content=audio_bytes, media_type="audio/mpeg")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 # /api/stt
@@ -277,7 +277,7 @@ async def stt_endpoint(file: UploadFile = File(...)):
     try:
         import whisper as _whisper  # noqa: F401
     except ImportError:
-        raise HTTPException(status_code=503, detail="STT unavailable: openai-whisper not installed")
+        raise HTTPException(status_code=503, detail="STT unavailable: openai-whisper not installed") from None
     audio_bytes = await file.read()
     if not audio_bytes:
         raise HTTPException(status_code=400, detail="Empty audio file")
@@ -287,7 +287,7 @@ async def stt_endpoint(file: UploadFile = File(...)):
         text = await transcribe_bytes_async(audio_bytes, file_ext=ext)
         return JSONResponse({"text": text.strip()})
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 # Launch

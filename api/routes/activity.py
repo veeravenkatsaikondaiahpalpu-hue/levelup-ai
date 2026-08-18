@@ -85,12 +85,12 @@ def _get_detector():
                     f"Anomaly detection models not found. "
                     f"Run `python -m anomaly_detection.train` first. ({e})"
                 ),
-            )
+            ) from e
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail=f"Could not load anomaly detector: {e}",
-            )
+            ) from e
     return _detector
 
 

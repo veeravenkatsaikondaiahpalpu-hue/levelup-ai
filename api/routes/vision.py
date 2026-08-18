@@ -105,19 +105,11 @@ async def vision_chat(
             detail=f"Unknown build '{build}'. Choose from: {list(FINETUNE_SYSTEM_PROMPTS.keys())}",
         )
 
-    # Read image bytes if provided
+    # Read image bytes if provided. The processor sniffs the format from the
+    # bytes themselves, so we don't need the content-type or a file extension.
     image_bytes: bytes | None = None
-    image_ext:   str = ".jpg"
     if image is not None:
         image_bytes = await image.read()
-        if image.content_type:
-            ct = image.content_type.lower()
-            if "png" in ct:
-                image_ext = ".png"
-            elif "webp" in ct:
-                image_ext = ".webp"
-            elif "gif" in ct:
-                image_ext = ".gif"
 
     t0 = time.time()
     reply = model.generate(

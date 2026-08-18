@@ -200,7 +200,7 @@ def collect_empire():
                 if count >= 500: break
                 try:
                     q, a = extractor(row)
-                except:
+                except Exception:
                     continue
                 q, a = clean(str(q)), clean(str(a))
                 if not q or not a or len(a) < 60: continue
@@ -299,7 +299,7 @@ def collect_muse():
                 if count >= 500: break
                 try:
                     q, a = extractor(row)
-                except:
+                except Exception:
                     continue
                 q, a = clean(str(q)), clean(str(a))
                 if not q or not a or len(a) < 60: continue
