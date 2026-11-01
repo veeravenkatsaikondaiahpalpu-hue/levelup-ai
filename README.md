@@ -292,15 +292,20 @@ python -m pytest tests/test_guardrails.py -v
 
 ---
 
-## 👥 Team
+## 👤 Author
 
-A team of 3 — Applied AI, SRH Stuttgart
+**Veera Venkat Sai Kondaiahpalpu** — M.Sc. Applied Computer Science, SRH University Stuttgart.
 
-| Role | Focus |
-|------|-------|
-| AI & Backend | LLM fine-tuning, FastAPI, voice pipeline |
-| ML Models | Anomaly detection, sentiment classifier |
-| Frontend & UX | RPG SPA design, XP engine, game mechanics |
+Built solo, end to end. Every component below was designed, implemented and tested by me.
+
+| Area | What I built |
+|------|-------------|
+| AI & Backend | QLoRA fine-tuning pipeline (LLaMA 3.2 3B), FastAPI streaming inference, voice pipeline, multimodal image+text endpoint |
+| ML Models | Anomaly detection (Logistic Regression / Decision Tree / Random Forest), sentiment classifier |
+| Frontend & UX | RPG single-page app, XP engine, game mechanics |
+| Security & Quality | Two-layer runtime guardrail (12 OWASP-mapped rules), 156 automated tests, GitHub Actions CI |
+
+<!-- LLM / tooling credits per aspect: add your section here -->
 
 ---
 
