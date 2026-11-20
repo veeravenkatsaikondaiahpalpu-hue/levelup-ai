@@ -161,6 +161,41 @@ python -m chatbot.fine_tuning.train --smoke_test
 
 ---
 
+## 📊 Evaluation — Does the Fine-Tuning Actually Help?
+
+A held-out evaluation comparing the **base model against the fine-tuned adapter**, on identical
+prompts with identical decoding. The adapter is the only variable: both conditions run from one
+loaded model via PEFT's `disable_adapter()`, so the base weights are provably the same.
+
+```bash
+python -m chatbot.fine_tuning.evaluate                      # 200 samples (default)
+python -m chatbot.fine_tuning.evaluate --n 400 --batch-size 8
+```
+
+**Results** (200 held-out samples, greedy decoding, 4-bit NF4, seed 42):
+
+| Metric | Base | Fine-tuned | Delta |
+|---|---|---|---|
+| ROUGE-1 | 0.2660 | 0.3714 | **+0.1054** |
+| ROUGE-2 | 0.0803 | 0.1616 | **+0.0813** |
+| **ROUGE-L** | **0.1570** | **0.2665** | **+0.1095 (+70% relative)** |
+
+All seven builds improved; none regressed. Per-build ROUGE-L gain ranged from **+0.0700**
+(PHANTOM) to **+0.1877** (GG). Full output in [`models/eval_results.json`](models/eval_results.json).
+
+**How the evaluation set is kept honest**
+
+- The validation set is a **separate file** (`finetune_val_v2.jsonl`), not a random split of training data
+- **182 of 8,519 val rows (2.14%)** appear verbatim in the training file and are **dropped before sampling**
+- Greedy decoding (`do_sample=False`), so re-running reproduces the numbers
+
+**Reading the absolute numbers.** ROUGE-L measures longest-common-subsequence overlap against a
+single human reference reply. Open-ended prompts have many good answers, so absolute values are
+low by nature — the base-vs-tuned delta is the result, not the raw score. These figures measure
+the adapter's contribution only, with prompting held constant between conditions.
+
+---
+
 ## 🎤 Voice Features
 
 ### STT — Speech to Text (Mic Input)

@@ -27,7 +27,8 @@ ENV/
 *.ckpt
 *.pt
 *.pth
-models/
+models/*
+!models/eval_results.json
 checkpoints/
 outputs/
 
@@ -78,3 +79,6 @@ models/llm/weights/
 # local virtualenvs
 .venv311/
 .venv*/
+
+# Evaluation results are small, reproducible and worth versioning
+!models/eval_results.json

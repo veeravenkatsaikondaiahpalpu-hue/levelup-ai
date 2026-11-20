@@ -1,0 +1,85 @@
+{
+  "adapter": "C:\\Users\\veera\\Desktop\\projects\\Biuld URself\\levelup-ai\\models\\final\\levelup-qlora-cloud",
+  "base_model": "unsloth/Llama-3.2-3B-Instruct",
+  "dataset": {
+    "train_rows": 76616,
+    "val_rows": 8519,
+    "val_rows_dropped_as_leaked": 182,
+    "val_rows_after_leak_removal": 8337,
+    "val_rows_usable": 8337,
+    "evaluated": 200,
+    "sampling_seed": 42
+  },
+  "decoding": {
+    "do_sample": false,
+    "max_new_tokens": 256,
+    "batch_size": 8,
+    "max_input_tokens": 1024,
+    "quantisation": "4-bit NF4"
+  },
+  "base_model_scores": {
+    "rouge1": 0.266,
+    "rouge2": 0.0803,
+    "rougeL": 0.157
+  },
+  "fine_tuned_scores": {
+    "rouge1": 0.3714,
+    "rouge2": 0.1616,
+    "rougeL": 0.2665
+  },
+  "delta": {
+    "rouge1": 0.1054,
+    "rouge2": 0.0813,
+    "rougeL": 0.1095
+  },
+  "per_build_rougeL": {
+    "EMPIRE": {
+      "n": 26,
+      "base": 0.173,
+      "tuned": 0.2485,
+      "delta": 0.0755
+    },
+    "ORACLE": {
+      "n": 67,
+      "base": 0.1358,
+      "tuned": 0.2493,
+      "delta": 0.1135
+    },
+    "TITAN": {
+      "n": 20,
+      "base": 0.1257,
+      "tuned": 0.2389,
+      "delta": 0.1132
+    },
+    "MUSE": {
+      "n": 24,
+      "base": 0.1629,
+      "tuned": 0.2925,
+      "delta": 0.1296
+    },
+    "GG": {
+      "n": 20,
+      "base": 0.1557,
+      "tuned": 0.3434,
+      "delta": 0.1877
+    },
+    "PHANTOM": {
+      "n": 24,
+      "base": 0.1965,
+      "tuned": 0.2665,
+      "delta": 0.07
+    },
+    "SAGE": {
+      "n": 19,
+      "base": 0.1867,
+      "tuned": 0.2669,
+      "delta": 0.0802
+    }
+  },
+  "runtime_minutes": 21.53,
+  "caveats": [
+    "ROUGE-L measures longest-common-subsequence overlap against a single human reference reply. Open-ended prompts admit many good answers, so absolute values are low by nature; the base-vs-tuned delta is the result.",
+    "Leaked validation rows were removed before sampling.",
+    "Greedy decoding; no sampling, no prompt tuning beyond the training format."
+  ]
+}
