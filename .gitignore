@@ -82,3 +82,8 @@ models/llm/weights/
 
 # Evaluation results are small, reproducible and worth versioning
 !models/eval_results.json
+
+# Assembled by scripts/prepare_space.py — originals are the source of truth
+spaces/backend/anomaly_detection/
+spaces/backend/sentiment/
+spaces/backend/models/

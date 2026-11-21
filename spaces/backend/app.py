@@ -108,26 +108,35 @@ BUILD_PROMPTS = {
 
 # Anomaly & Sentiment (CPU — no GPU needed)
 
-def _load_anomaly_models():
+# Both of these reuse the same classes the local FastAPI app uses, rather than
+# reloading the joblib files by hand. That matters for anomaly detection: the
+# classifiers were trained on StandardScaler-transformed features, so calling
+# .predict() on raw values returns confident nonsense rather than failing.
+
+def _load_anomaly_detector():
     try:
-        import joblib
-        base = Path(__file__).parent / "anomaly_detection"
-        lr   = joblib.load(base / "logistic_regression_model.pkl")
-        dt   = joblib.load(base / "decision_tree_model.pkl")
-        return lr, dt
+        from anomaly_detection.models import AnomalyDetector
+
+        det = AnomalyDetector()
+        det.load()
+        print("[LevelUp] Anomaly detector ready.")
+        return det
     except Exception as e:
-        print(f"[LevelUp] Anomaly models not loaded: {e}")
-        return None, None
+        print(f"[LevelUp] Anomaly detector not loaded: {e}")
+        return None
 
 def _load_sentiment_model():
     try:
-        from chatbot.sentiment import SentimentAnalyzer
-        return SentimentAnalyzer()
+        from sentiment.models import get_analyzer
+
+        analyzer = get_analyzer()
+        print("[LevelUp] Sentiment analyzer ready.")
+        return analyzer
     except Exception as e:
         print(f"[LevelUp] Sentiment model not loaded: {e}")
         return None
 
-_anomaly_lr, _anomaly_dt = _load_anomaly_models()
+_anomaly_detector = _load_anomaly_detector()
 _sentiment_model = _load_sentiment_model()
 
 
@@ -218,20 +227,16 @@ async def chat_endpoint(request: Request):
 
 @demo.app.post("/api/activity/check")
 async def activity_check(request: Request):
-    if _anomaly_lr is None:
-        return JSONResponse({"anomaly": False, "note": "Models not loaded"})
-    body     = await request.json()
-    features = body.get("features", [])
-    import numpy as np
-    X = np.array(features).reshape(1, -1)
-    lr_pred = int(_anomaly_lr.predict(X)[0])
-    dt_pred = int(_anomaly_dt.predict(X)[0])
-    anomaly = bool(lr_pred or dt_pred)
-    return JSONResponse({
-        "anomaly":            anomaly,
-        "logistic_regression": lr_pred,
-        "decision_tree":       dt_pred,
-    })
+    # The client posts named features at the top level and reads `is_anomaly`
+    # plus `anomaly_type` off the response, which is what AnomalyDetector
+    # returns directly.
+    if _anomaly_detector is None:
+        return JSONResponse({"is_anomaly": False, "note": "Models not loaded"})
+    body = await request.json()
+    try:
+        return JSONResponse(_anomaly_detector.predict(body))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Anomaly check failed: {e}") from e
 
 
 # /api/sentiment/analyze
@@ -245,7 +250,7 @@ async def sentiment_endpoint(request: Request):
     if _sentiment_model is None:
         return JSONResponse({"label": "neutral", "score": 0.5, "note": "Model not loaded"})
     try:
-        result = _sentiment_model.analyze(text)
+        result = _sentiment_model.predict(text)
         return JSONResponse(result)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
