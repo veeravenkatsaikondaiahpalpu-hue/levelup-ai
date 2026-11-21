@@ -2066,6 +2066,11 @@ document.addEventListener('DOMContentLoaded', () => {
     initDashboard();
   }
   // else: splash is default visible
+
+  // Probe the backend once on load so a first-time visitor learns what is and
+  // is not live before investing time in the flow, not after. Delayed so it
+  // does not compete with the intro animation.
+  if (HOSTED_DEMO) setTimeout(checkApiStatus, 2500);
 });
 </script>
 </body>
