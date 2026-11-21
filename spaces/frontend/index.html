@@ -1680,6 +1680,59 @@ async function checkApiStatus() {
     dot.style.background = apiOnline ? '#10b981' : '#6b7280';
     lbl.textContent = apiOnline ? 'Coach Online' : 'Coach Offline';
   }
+  if (!apiOnline) showDemoNotice(); else hideDemoNotice();
+}
+
+// On the hosted demo there is no GPU backend. Say so plainly rather than
+// letting the chat look broken.
+const HOSTED_DEMO = window.location.hostname.endsWith('.hf.space');
+const MODEL_CARD  = 'https://huggingface.co/veeravenkatsai/levelup-qlora-llama3.2-3b';
+const SOURCE_REPO = 'https://github.com/veeravenkatsaikondaiahpalpu-hue/levelup-ai';
+
+function hideDemoNotice() {
+  const el = document.getElementById('demo-notice');
+  if (el) el.remove();
+}
+
+function showDemoNotice() {
+  if (!HOSTED_DEMO) return;
+  if (document.getElementById('demo-notice')) return;
+  if (localStorage.getItem('levelup_notice_dismissed') === '1') return;
+
+  const bar = document.createElement('div');
+  bar.id = 'demo-notice';
+  bar.style.cssText = [
+    'position:fixed', 'left:50%', 'transform:translateX(-50%)', 'bottom:16px',
+    'z-index:9999', 'max-width:min(680px,calc(100vw - 32px))',
+    'background:rgba(18,18,26,.97)', 'border:1px solid rgba(245,158,11,.45)',
+    'border-radius:12px', 'padding:14px 16px', 'color:#e8e8ef',
+    'font-size:13px', 'line-height:1.55',
+    'box-shadow:0 10px 32px rgba(0,0,0,.5)',
+  ].join(';');
+
+  bar.innerHTML =
+    '<div style="display:flex;gap:12px;align-items:flex-start">' +
+      '<div style="flex:1">' +
+        '<strong style="color:#fbbf24">Live demo &mdash; AI coach offline</strong><br>' +
+        'The interface, build system, quests and XP progression are fully interactive. ' +
+        'The AI coach is a fine-tuned LLaMA&nbsp;3.2&nbsp;3B that needs a GPU, which this ' +
+        'free static host cannot provide. ' +
+        '<a href="' + MODEL_CARD + '" target="_blank" rel="noopener" ' +
+          'style="color:#fbbf24;text-decoration:underline">See the model card</a> ' +
+        'for held-out evaluation results, or ' +
+        '<a href="' + SOURCE_REPO + '" target="_blank" rel="noopener" ' +
+          'style="color:#fbbf24;text-decoration:underline">run the full stack locally</a>.' +
+      '</div>' +
+      '<button id="demo-notice-x" aria-label="Dismiss" ' +
+        'style="background:none;border:none;color:#9b9bb0;font-size:20px;' +
+        'line-height:1;cursor:pointer;padding:0 2px">&times;</button>' +
+    '</div>';
+
+  document.body.appendChild(bar);
+  document.getElementById('demo-notice-x').onclick = () => {
+    try { localStorage.setItem('levelup_notice_dismissed', '1'); } catch (e) {}
+    hideDemoNotice();
+  };
 }
 
 function initChat() {
@@ -1941,7 +1994,7 @@ async function sendChatMessage() {
       // 🔊 Speak the AI response if TTS is enabled
       speakResponse(reply, state.user.build);
     } else if (res.status === 503) {
-      appendChatMessage('ai', '🧠 LLM not loaded — the AI coach needs GPU power. The backend must be run with LEVELUP_LOAD_MODEL=true');
+      appendChatMessage('ai', '🧠 The AI coach is not loaded on this host — it needs a GPU. Its held-out evaluation is on the model card, linked below.');
     } else {
       throw new Error(`HTTP ${res.status}`);
     }
@@ -1950,7 +2003,9 @@ async function sendChatMessage() {
     const isTimeout = e.name === 'TimeoutError' || e.message?.includes('timeout');
     const fallback = isTimeout
       ? '⏳ Response timed out — the model is still generating. Try a shorter question.'
-      : '📡 Could not reach the AI coach. Make sure the backend is running at port 8000.';
+      : (HOSTED_DEMO
+        ? '📡 The AI coach is offline in this hosted demo — the fine-tuned model needs a GPU. Everything else here is live: try the quests, XP and build system.'
+        : '📡 Could not reach the AI coach. Make sure the backend is running at port 8000.');
     appendChatMessage('ai', fallback);
   }
 
